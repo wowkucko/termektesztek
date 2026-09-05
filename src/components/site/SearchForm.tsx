@@ -14,7 +14,7 @@ type SearchResult = {
   categoryName: string;
 };
 
-export default function SearchForm() {
+export default function SearchForm({ inlineResults = false }: { inlineResults?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -49,7 +49,9 @@ export default function SearchForm() {
     }, 250);
   }, []);
 
-  // Klikk kívül: bezárás
+  // Klikk kívül: bezárás. Szándékosan CLICK-re (nem mousedown-ra) zárunk:
+  // így a lenyíló becsukódása nem rántja ki a talajt a koppintás alól
+  // (nincs layout-shift a tap és a navigáció között).
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
@@ -57,11 +59,18 @@ export default function SearchForm() {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
-    document.addEventListener('mousedown', onClick);
+    // Görgetésre is csukódjon: mobilon a nyitva maradt legördülő
+    // különben letakarja az alatta lévő linkeket (dupla-tap kellene).
+    function onScroll() {
+      setOpen(false);
+    }
+    document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
     return () => {
-      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('click', onClick);
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('scroll', onScroll, true);
     };
   }, []);
 
@@ -130,9 +139,16 @@ export default function SearchForm() {
         </div>
       </form>
 
-      {/* Élő találati legördülő */}
+      {/* Élő találati legördülő: desktopon overlay, mobil menüben folyamatba
+          ágyazva (így nem takarja le az alatta lévő linkeket) */}
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+        <div
+          className={
+            inlineResults
+              ? 'mt-2 overflow-hidden rounded-2xl border border-line bg-white shadow-card'
+              : 'absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-card'
+          }
+        >
           {results.length === 0 ? (
             <p className="px-4 py-3 font-sans text-sm text-ink/50">
               Nincs találat erre: „{query.trim()}”

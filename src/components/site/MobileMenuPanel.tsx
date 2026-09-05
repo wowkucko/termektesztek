@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import SearchForm from './SearchForm';
 
 type Category = { name: string; slug: string };
@@ -32,9 +32,14 @@ export default function MobileMenuPanel({
     };
   }, [onClose]);
 
-  // Útváltásnál bezárul (pathname változás = navigáció megtörtént)
+  // Útváltásnál bezárul (pathname változás = navigáció megtörtént).
+  // Ref-fel védve: a mount-kor LEFUTÓ effect ne zárja be azonnal a menüt.
+  const prevPath = useRef(pathname);
   useEffect(() => {
-    onClose();
+    if (prevPath.current !== pathname) {
+      prevPath.current = pathname;
+      onClose();
+    }
   }, [pathname, onClose]);
 
   return (
@@ -51,9 +56,9 @@ export default function MobileMenuPanel({
         aria-label="Navigáció"
         className="animate-[menuIn_.18s_ease-out] fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto rounded-b-2xl border-b border-line bg-white px-5 pb-6 pt-4 shadow-card lg:hidden"
       >
-        {/* Kereső a menüben */}
+        {/* Kereső a menüben (találatok folyamatba ágyazva) */}
         <div className="pb-4">
-          <SearchForm />
+          <SearchForm inlineResults />
         </div>
 
         {/* Kategóriák */}
