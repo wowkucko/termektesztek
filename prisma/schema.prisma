@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Megjegyzés: a SQLite nem támogatja natívan az enum típust, ezért a "status"
+// mezőt String-ként tároljuk. Az érvényes értékeket ("DRAFT" | "PUBLISHED")
+// a Zod séma (src/lib/validation.ts) kényszeríti ki alkalmazás szinten.
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  posts       Post[]
+  createdAt   DateTime @default(now())
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  posts     PostTag[]
+  createdAt DateTime  @default(now())
+}
+
+model Post {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  excerpt        String
+  content        String
+  coverImage     String?
+  coverImageAlt  String?
+  status         String     @default("DRAFT")
+  publishedAt    DateTime?
+  updatedAt      DateTime   @updatedAt
+  createdAt      DateTime   @default(now())
+
+  categoryId     String
+  category       Category   @relation(fields: [categoryId], references: [id])
+  tags           PostTag[]
+
+  // Termékteszt-specifikus mezők
+  productName    String?
+  productBrand   String?
+  priceFt        Int?       // Allegro aktuális ár forintban (termékdoboz, Offer séma, ársávos toplisták)
+  rating         Float?
+  pros           String     @default("[]") // JSON tömb stringként tárolva (SQLite nem támogat natív tömböt)
+  cons           String     @default("[]") // JSON tömb stringként tárolva
+  verdict        String?
+  affiliateUrl   String?
+
+  // SEO felülbírálás
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+
+  views          Int        @default(0)
+  comments       Comment[]
+
+  @@index([status, publishedAt])
+  @@index([categoryId])
+}
+
+model PostTag {
+  postId String
+  tagId String
+  post  Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag   Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+// === Olvasói tartalom és keresési napló (SEO) ===
+
+// Blogkommentek + olvasói csillagozás (UGC: friss tartalom, aggregateRating a sémában)
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    String
+  rating    Int?     // 1-5 olvasói csillag
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+
+// Belső keresések naplózása: a találat nélküli / gyenge keresésekből lesznek az új szinkron-tételek
+model SearchLog {
+  id          String   @id @default(cuid())
+  query       String
+  resultCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Push to live: melyik cikk/kép ment már fel a távoli (éles) blogra.
+// (Az admin "Push to live" oldala és a scripts/push-posts.mjs CLI is ezt használhatná;
+// a CLI saját JSON-állományt használ, a szerveroldali push ezt a táblát.)
+model PushRecord {
+  id         String   @id @default(cuid())
+  postSlug   String   @unique
+  remoteSlug String
+  pushedAt   DateTime @default(now())
+}
+
+model PushFile {
+  localPath String   @id
+  remoteUrl String
+  pushedAt  DateTime @default(now())
+}
+
+// === Automatizált szinkron (Allegro + Gemini) ===
+
+// Egy sor a felhasználó által felvett terméklistából. A worker ezen iterál.
+model SyncProduct {
+  id            String   @id @default(cuid())
+  name          String   // A felhasználó által megadott terméknév (pl. "iPhone 15")
+  status        String   @default("QUEUED") // QUEUED | SCRAPING | GENERATING | DONE | FAILED | SKIPPED
+  lastError     String?
+  attempts      Int      @default(0)
+  allegroUrl    String?  // Talált termékoldal URL
+  allegroData   String?  // JSON: leírás, ár, vélemények, paraméterek
+  postId        String?  // Létrejött blogbejegyzés ID
+  postSlug      String?  // Létrejött blogbejegyzés slug
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// Globális szinkron-állapot (egy sor, id="global").
+model SyncState {
+  id              String    @id @default("global")
+  running         Boolean   @default(false)
+  paused          Boolean   @default(false)
+  rateLimited     Boolean   @default(false)
+  rateLimitUntil  DateTime?
+  lastRunAt       DateTime?
+  currentItemId   String?
+  log             String    @default("")
+  processedCount  Int       @default(0)
+  updatedAt       DateTime  @updatedAt
+}
+
+// Kulcsonkénti Gemini cooldown állapot (szerver-újraindítás után is megmarad).
+// A teljes API kulcsot SOHA nem tároljuk - csak annak sha256 hash-ét (keyHash),
+// így a DB-be jutó adat nem visszafejthető kulcs.
+model GeminiKeyState {
+  keyHash       String   @id // sha256 a teljes API kulcsról
+  cooldownUntil DateTime     // Mikor szabadul fel a kulcs (a cooldown vége)
+  updatedAt     DateTime @updatedAt
+}
+
+// === Automatizált link-ellenőrzés (Allegro affiliate linkek frissessége) ===
+
+// Egy sor egy blogbejegyzés Allegro affiliate linkjének ellenőrzéséről.
+// A worker a PUBLISHED posztok affiliateUrl-jait járja végig.
+model LinkCheckItem {
+  id         String   @id @default(cuid())
+  postId     String   // A blogbejegyzés ID
+  postTitle  String   // Pillanatkép a címről (átnevezés után is látható)
+  oldUrl     String   // Az eredeti affiliate link
+  status     String   @default("QUEUED") // QUEUED | CHECKING | SEARCHING | MATCHING | OK | REPLACED | NOT_FOUND | FAILED
+  alive      Boolean? // Él-e még az eredeti link (null = még nem ellenőriztük)
+  newUrl     String?  // A lecserélt (új) affiliate link
+  reason     String?  // Miért cseréltük / miért nincs találat
+  lastError  String?
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// Globális link-ellenőrző állapot (egy sor, id="global").
+model LinkCheckState {
+  id              String    @id @default("global")
+  running         Boolean   @default(false)
+  paused          Boolean   @default(false)
+  rateLimited     Boolean   @default(false)
+  rateLimitUntil  DateTime?
+  lastRunAt       DateTime?
+  currentItemId   String?
+  log             String    @default("")
+  processedCount  Int       @default(0)
+  replacedCount  Int       @default(0)
+  // Ütemezett futtatás (in-process scheduler, lásd src/lib/linkCheckScheduler.ts)
+  nextRunAt       DateTime? // Mikor esedékes a következő automatikus futás (null = még nincs beállítva)
+  scheduleEnabled Boolean?  // null = env alapértelmezés (prod: be, dev: ki), felülírható a panelen
+  updatedAt       DateTime  @updatedAt
+}

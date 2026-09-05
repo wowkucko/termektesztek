@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    @apply bg-paper text-ink font-body antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+
+  ::selection {
+    @apply bg-signal-100 text-signal-700;
+  }
+
+  :focus-visible {
+    outline: 2px solid #E8542A;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-tight bg-signal px-5 py-3 font-sans text-sm font-semibold text-white shadow-stamp transition-transform hover:-translate-y-0.5 hover:bg-signal-600;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-tight border border-ink/15 bg-white px-5 py-3 font-sans text-sm font-semibold text-ink transition-colors hover:border-teal-500 hover:text-teal-600;
+  }
+
+  .field-label {
+    @apply mb-1.5 block font-sans text-sm font-medium text-ink/80;
+  }
+
+  .field-input {
+    @apply w-full rounded-tight border border-ink/15 bg-white px-3.5 py-2.5 font-sans text-sm text-ink placeholder:text-ink/35 focus:border-teal-500 focus:outline-none;
+  }
+}
+
+/* Mobil menü belépő animációja */
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.post-content {
+  @apply prose prose-lg max-w-none font-body prose-headings:font-display prose-headings:font-semibold prose-a:text-teal-600 prose-a:no-underline hover:prose-a:underline prose-img:rounded-card;
+}
+
+/* Markdown képek: egységes szélesség a szöveggel, arány megtartásával,
+   középre igazítva, lekerekített sarkokkal. Soha nem tolnak szét semmit. */
+.post-content img {
+  @apply mx-auto h-auto max-w-full rounded-card;
+  display: block;
+  width: 100%;            /* megegyezik a szöveg szélességével */
+  max-height: 36rem;      /* nagyon magas képek plafonja */
+  object-fit: contain;    /* arány sosem torzul */
+  background: transparent;
+}
+
+/* Kép-forrás jelölés: elegáns, kicsi, dőlt, diszkrét a kép alatt.
+   A benne lévő hivatkozás finoman kiemelt, hover-re erősödik. */
+.post-content sub.img-source {
+  display: block;
+  margin-top: 0.35rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  vertical-align: baseline;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: rgba(30, 30, 30, 0.42);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.post-content sub.img-source a {
+  color: rgba(13, 148, 136, 0.75);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+
+.post-content sub.img-source a:hover {
+  color: #0d9488;
+  text-decoration-style: solid;
+}
+
+/* Nagy kijelzőn a keskenyebb (navy 1:1) kepek ne nyujtanak vegtelenul: */
+@media (min-width: 1024px) {
+  .post-content img {
+    width: 85%;           /* kissé keskenyebb, elegansabb marginszeru hatas */
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

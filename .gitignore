@@ -1,0 +1,56 @@
+# Függőségek
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Környezeti változók (titkok!) - éles .env-t külön kell felvinni a szerverre
+.env
+.env*.local
+
+# SQLite adatbázis (helyi + éles) - soha ne menjen gitre!
+prisma/*.db
+prisma/*.db-journal
+*.db
+
+# Feltöltött képek (a push-script viszi fel élesre, nem a git)
+public/uploads/*
+
+# Push-állapot (helyi gép nyilvántartása)
+scripts/pushed.json
+
+# Naplók, ideiglenes fájlok
+dev.log
+*.log
+*.tmp*.mjs
+check-*.mjs
+diag-*.mjs
+dump-*.html
+test-*.mjs
+get*.mjs
+gs.mjs
+rst.mjs
+chk.mjs
+getslug.mjs
+getslugs.mjs
+getid.mjs
+getids.mjs
+getcopy.mjs
+dup*.mjs
+unstick.mjs
+cleanup*.mjs
+backfill-*.mjs
+pushclean.mjs
+pushenv.mjs
+verify.mjs
+restore-*.mjs
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# PM2
+.pm2/

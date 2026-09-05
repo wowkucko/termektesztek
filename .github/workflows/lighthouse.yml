@@ -1,0 +1,50 @@
+name: Lighthouse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # CI számára friss, üres adatbázis — a seed létrehozza a minta tartalmat,
+      # így a Lighthouse a valódi (cikk/kategória/címke) oldalakat tudja mérni.
+      DATABASE_URL: 'file:./prisma/ci.db'
+      ADMIN_EMAIL: 'ci@example.com'
+      ADMIN_PASSWORD: 'ci-password'
+      # Az ütemezett link-ellenőrzés ne induljon be a CI szerverén
+      LINKCHECK_SCHEDULE_ENABLED: '0'
+      # Chrome sandbox nem elérhető CI-konténerekben
+      LHCI_NO_SANDBOX: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Függőségek
+        run: npm ci
+
+      - name: Adatbázis és minta tartalom
+        run: |
+          npx prisma migrate deploy
+          npm run db:seed
+
+      - name: Build + Lighthouse audit
+        run: npm run lighthouse:ci
+
+      - name: Lighthouse jelentések
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci
+          retention-days: 14
