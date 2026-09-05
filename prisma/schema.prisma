@@ -109,6 +109,13 @@ model SearchLog {
   @@index([createdAt])
 }
 
+// Éles keresési napló lehúzásának könyvjelzője (push tükörképe):
+// legutóbb meddig szinkronizáltunk, hogy csak az újakat kérjük le.
+model SearchLogPull {
+  id          String    @id @default("global")
+  pulledUntil DateTime?
+}
+
 // Push to live: melyik cikk/kép ment már fel a távoli (éles) blogra.
 // (Az admin "Push to live" oldala és a scripts/push-posts.mjs CLI is ezt használhatná;
 // a CLI saját JSON-állományt használ, a szerveroldali push ezt a táblát.)

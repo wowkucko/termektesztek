@@ -36,6 +36,22 @@ export default function SearchLogPanel({ rows }: { rows: SearchLogRow[] }) {
     router.refresh();
   };
 
+  const pullLive = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/search-log/pull', { method: 'POST' });
+      const j = await res.json();
+      setMessage(
+        res.ok
+          ? `Éles napló lehúzva: ${j.pulled} új keresés.${j.prunedRemote > 0 ? ` (Élesen ${j.prunedRemote} régi sor törölve.)` : ''}`
+          : j.error || 'Hiba a lehúzáskor.'
+      );
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {message && (
@@ -49,7 +65,12 @@ export default function SearchLogPanel({ rows }: { rows: SearchLogRow[] }) {
         <p className="mt-1 font-body text-sm text-ink/50">
           Belső keresések gyakoriság szerint. A <strong>0 találatos</strong> keresések a
           legjobb új cikk-ötletek: egy kattintással felveheted őket a szinkronlistába.
+          Az éles oldal kereséseit a lenti gombbal húzhatod le (az éles napló a távoli
+          adatbázisba gyűlik).
         </p>
+        <button onClick={pullLive} disabled={busy} className="btn-secondary mt-3 disabled:opacity-40">
+          {busy ? '⟳ Lehúzás…' : '⬇ Éles keresések lehúzása'}
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-card border border-line bg-white">
