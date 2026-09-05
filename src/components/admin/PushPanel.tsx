@@ -10,6 +10,8 @@ type PushStatus = {
   to: string | null;
   pendingCount: number;
   pending: PendingPost[];
+  updatedCount: number;
+  updated: { slug: string; title: string; updatedAt: string }[];
   pushedCount: number;
   recent: { postSlug: string; remoteSlug: string; pushedAt: string }[];
 };
@@ -32,14 +34,14 @@ export default function PushPanel() {
     refresh();
   }, [refresh]);
 
-  const push = async (slugs?: string[]) => {
+  const push = async (slugs?: string[], kind?: 'updates') => {
     setBusy(true);
     setResult(null);
     try {
       const res = await fetch('/api/admin/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(slugs ? { slugs } : { limit: 10 }),
+        body: JSON.stringify(slugs ? { slugs } : { limit: 10, ...(kind ? { kind } : {}) }),
       });
       const j = await res.json();
       setResult({ pushed: j.pushed || [], errors: j.errors || [] });
@@ -112,6 +114,34 @@ export default function PushPanel() {
           {result.pushed.length === 0 && result.errors.length === 0 && (
             <p className="mt-2 font-sans text-sm text-ink/60">Nincs új feltöltendő cikk.</p>
           )}
+        </div>
+      )}
+
+      {data.updatedCount > 0 && (
+        <div className="rounded-card border border-blue-200 bg-blue-50/50 p-5">
+          <h2 className="font-display text-lg font-bold text-ink">Élesen frissítendő módosulások</h2>
+          <p className="mt-1 font-body text-sm text-ink/55">
+            {data.updatedCount} már feltöltött cikk itthon megváltozott (pl. a link-ellenőrző
+            lecserélte a vásárlási linket, vagy szerkesztetted). A frissítés felülírja az éles
+            tartalmat, az ottani hozzászólások megmaradnak.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {data.updated.slice(0, 8).map((u) => (
+              <li key={u.slug} className="font-sans text-sm text-ink/75">
+                {u.title}{' '}
+                <span className="text-xs text-ink/40">
+                  · módosítva: {new Date(u.updatedAt).toLocaleString('hu-HU', { dateStyle: 'short', timeStyle: 'short' })}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => push(undefined, 'updates')}
+            disabled={busy}
+            className="btn-secondary mt-4 disabled:opacity-40"
+          >
+            {busy ? '⟳ Frissítés folyamatban…' : `🔄 ${Math.min(data.updatedCount, 10)} módosult cikk frissítése`}
+          </button>
         </div>
       )}
 

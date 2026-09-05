@@ -55,6 +55,202 @@ export type PushReport = {
   errors: string[];
 };
 
+type RemoteApi = (
+  pathname: string,
+  init?: { method?: string; json?: unknown; form?: FormData }
+) => Promise<{ status: number; data: Record<string, unknown> | null; text: string }>;
+
+// Helyi képek biztosítása távol: csak az újakat tölti fel, a többit a PushFile térképből veszi.
+async function ensureRemoteFiles(
+  api: RemoteApi,
+  files: string[]
+): Promise<{ urlMap: Record<string, string>; error?: string }> {
+  const urlMap: Record<string, string> = {};
+  for (const local of files) {
+    const known = await prisma.pushFile.findUnique({ where: { localPath: local } });
+    if (known) {
+      urlMap[local] = known.remoteUrl;
+      continue;
+    }
+    const abs = path.join(process.cwd(), 'public', local);
+    if (!existsSync(abs)) {
+      return { urlMap, error: `hiányzó kép, kihagyva: ${local}` };
+    }
+    const ext = path.extname(local).toLowerCase();
+    const buf = await readFile(abs);
+    const form = new FormData();
+    const blob =
+      typeof File !== 'undefined'
+        ? new File([buf], path.basename(local), { type: MIME[ext] || 'image/jpeg' })
+        : new Blob([buf], { type: MIME[ext] || 'image/jpeg' });
+    form.append('file', blob, path.basename(local));
+    const up = await api('/api/admin/upload', { method: 'POST', form });
+    const url = typeof up.data?.url === 'string' ? up.data.url : null;
+    if (up.status !== 200 || !url) {
+      return { urlMap, error: `képfeltöltés-hiba ${local}: ${up.status}` };
+    }
+    urlMap[local] = url;
+    await prisma.pushFile.create({ data: { localPath: local, remoteUrl: url } }).catch(() => {});
+  }
+  return { urlMap };
+}
+
+function makeRewriter(urlMap: Record<string, string>) {
+  return (t: string | null) => {
+    if (typeof t !== 'string') return t;
+    let out = t;
+    for (const [from, to] of Object.entries(urlMap)) out = out.split(from).join(to);
+    return out;
+  };
+}
+
+type PushablePost = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage: string | null;
+  coverImageAlt: string | null;
+  category: { slug: string };
+  tags: { tag: { name: string } }[];
+  productName: string | null;
+  productBrand: string | null;
+  priceFt: number | null;
+  rating: number | null;
+  pros: string;
+  cons: string;
+  verdict: string | null;
+  affiliateUrl: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  ogImage: string | null;
+};
+
+function buildPostPayload(p: PushablePost, rewrite: (t: string | null) => string | null) {
+  return {
+    title: p.title,
+    slug: p.slug,
+    excerpt: p.excerpt,
+    content: rewrite(p.content),
+    coverImage: rewrite(p.coverImage),
+    coverImageAlt: p.coverImageAlt,
+    categorySlug: p.category.slug,
+    tags: p.tags.map((t) => t.tag.name),
+    status: 'PUBLISHED',
+    productName: p.productName,
+    productBrand: p.productBrand,
+    priceFt: p.priceFt,
+    rating: p.rating,
+    pros: safeParseArray(p.pros),
+    cons: safeParseArray(p.cons),
+    verdict: p.verdict,
+    affiliateUrl: p.affiliateUrl,
+    seoTitle: p.seoTitle,
+    seoDescription: p.seoDescription,
+    ogImage: rewrite(p.ogImage),
+  };
+}
+
+// Már feltöltött, de itthon azóta MÓDOSULT cikkek (pl. link-ellenőrző
+// lecserélte az affiliate linket, vagy admin-szerkesztés történt).
+// Jel: a helyi updatedAt újabb, mint a feltöltés időpontja.
+export async function getUpdatedPosts(limit = 50) {
+  const records = await prisma.pushRecord.findMany({ orderBy: { pushedAt: 'desc' }, take: 500 });
+  const out: { post: PushablePost & { id: string; updatedAt: Date }; remoteSlug: string }[] = [];
+  for (const r of records) {
+    const post = await prisma.post.findUnique({
+      where: { slug: r.postSlug },
+      include: { category: true, tags: { include: { tag: true } } },
+    });
+    if (!post || post.status !== 'PUBLISHED') continue;
+    if (post.updatedAt.getTime() > r.pushedAt.getTime() + 1000) {
+      out.push({ post, remoteSlug: r.remoteSlug });
+    }
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+// Módosult cikkek frissítése távol (PUT slug alapján, új képeket is feltöltve)
+export async function pushUpdatesToLive(opts: { slugs?: string[]; limit?: number }): Promise<PushReport> {
+  const report: PushReport = { pushed: [], skipped: [], errors: [] };
+  const cfg = getPushConfig();
+  if (!cfg) {
+    report.errors.push('PUSH_TO / PUSH_EMAIL / PUSH_PASSWORD nincs beállítva a .env fájlban.');
+    return report;
+  }
+
+  let jar = '';
+  const api: RemoteApi = async (pathname, init) => {
+    const headers: Record<string, string> = {};
+    if (jar) headers.cookie = jar;
+    let body: BodyInit | undefined;
+    if (init?.json !== undefined) {
+      headers['content-type'] = 'application/json';
+      body = JSON.stringify(init.json);
+    } else if (init?.form) {
+      body = init.form;
+    }
+    const res = await fetch(cfg.to + pathname, { method: init?.method || 'GET', headers, body });
+    const setCookie = res.headers.get('set-cookie');
+    if (setCookie) {
+      const m = setCookie.match(/session=[^;]+/);
+      if (m) jar = m[0];
+    }
+    const text = await res.text();
+    let data: unknown = null;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      /* nem JSON */
+    }
+    return { status: res.status, data: data as Record<string, unknown> | null, text };
+  };
+
+  const login = await api('/api/admin/auth/login', {
+    method: 'POST',
+    json: { email: cfg.email, password: cfg.password },
+  });
+  if (login.status !== 200) {
+    report.errors.push(`Távoli login sikertelen (${login.status}): ${login.text.slice(0, 150)}`);
+    return report;
+  }
+
+  let items = await getUpdatedPosts(500);
+  if (opts.slugs && opts.slugs.length > 0) {
+    const set = new Set(opts.slugs);
+    items = items.filter((i) => set.has(i.post.slug));
+  }
+  if (opts.limit) items = items.slice(0, opts.limit);
+  if (items.length === 0) {
+    report.skipped.push('Nincs élesen frissítendő módosult cikk.');
+    return report;
+  }
+
+  for (const { post: p, remoteSlug } of items) {
+    const files = localFilesIn(p.content, p.coverImage, p.ogImage);
+    const { urlMap, error: fileError } = await ensureRemoteFiles(api, files);
+    if (fileError) {
+      report.errors.push(`[${p.slug}] ${fileError}`);
+      continue;
+    }
+    const r = await api(`/api/admin/posts/by-slug/${encodeURIComponent(remoteSlug)}`, {
+      method: 'PUT',
+      json: buildPostPayload(p, makeRewriter(urlMap)),
+    });
+    if (r.status !== 200 || !r.data?.ok) {
+      report.errors.push(`[${p.slug}] frissítés-hiba: ${r.status} ${r.text.slice(0, 150)}`);
+      continue;
+    }
+    await prisma.pushRecord
+      .update({ where: { postSlug: p.slug }, data: { pushedAt: new Date() } })
+      .catch(() => {});
+    report.pushed.push({ localSlug: p.slug, remoteSlug, url: `${cfg.to}/blog/${remoteSlug}` });
+  }
+
+  return report;
+}
+
 export async function getPendingPosts(limit = 50) {
   const pushed = await prisma.pushRecord.findMany({ select: { postSlug: true } });
   const pushedSet = new Set(pushed.map((p) => p.postSlug));
@@ -150,70 +346,16 @@ export async function pushPostsToLive(opts: {
   // --- cikkenként: képek, majd POST ---
   for (const p of posts) {
     const files = localFilesIn(p.content, p.coverImage, p.ogImage);
-    const urlMap: Record<string, string> = {};
-    let failed = false;
-    for (const local of files) {
-      const known = await prisma.pushFile.findUnique({ where: { localPath: local } });
-      if (known) {
-        urlMap[local] = known.remoteUrl;
-        continue;
-      }
-      const abs = path.join(process.cwd(), 'public', local);
-      if (!existsSync(abs)) {
-        report.errors.push(`[${p.slug}] hiányzó kép, kihagyva: ${local}`);
-        failed = true;
-        break;
-      }
-      const ext = path.extname(local).toLowerCase();
-      const buf = await readFile(abs);
-      const form = new FormData();
-      const blob =
-        typeof File !== 'undefined'
-          ? new File([buf], path.basename(local), { type: MIME[ext] || 'image/jpeg' })
-          : new Blob([buf], { type: MIME[ext] || 'image/jpeg' });
-      form.append('file', blob, path.basename(local));
-      const up = await api('/api/admin/upload', { method: 'POST', form });
-      const url = typeof up.data?.url === 'string' ? up.data.url : null;
-      if (up.status !== 200 || !url) {
-        report.errors.push(`[${p.slug}] képfeltöltés-hiba ${local}: ${up.status}`);
-        failed = true;
-        break;
-      }
-      urlMap[local] = url;
-      await prisma.pushFile.create({ data: { localPath: local, remoteUrl: url } }).catch(() => {});
+    const { urlMap, error: fileError } = await ensureRemoteFiles(api, files);
+    if (fileError) {
+      report.errors.push(`[${p.slug}] ${fileError}`);
+      continue;
     }
-    if (failed) continue;
 
-    const rewrite = (t: string | null) => {
-      if (typeof t !== 'string') return t;
-      let out = t;
-      for (const [from, to] of Object.entries(urlMap)) out = out.split(from).join(to);
-      return out;
-    };
+    const rewrite = makeRewriter(urlMap);
     const r = await api('/api/admin/posts', {
       method: 'POST',
-      json: {
-        title: p.title,
-        slug: p.slug,
-        excerpt: p.excerpt,
-        content: rewrite(p.content),
-        coverImage: rewrite(p.coverImage),
-        coverImageAlt: p.coverImageAlt,
-        categorySlug: p.category.slug,
-        tags: p.tags.map((t) => t.tag.name),
-        status: 'PUBLISHED',
-        productName: p.productName,
-        productBrand: p.productBrand,
-        priceFt: p.priceFt,
-        rating: p.rating,
-        pros: safeParseArray(p.pros),
-        cons: safeParseArray(p.cons),
-        verdict: p.verdict,
-        affiliateUrl: p.affiliateUrl,
-        seoTitle: p.seoTitle,
-        seoDescription: p.seoDescription,
-        ogImage: rewrite(p.ogImage),
-      },
+      json: buildPostPayload(p, rewrite),
     });
     if (r.status !== 201 || !r.data?.ok || typeof r.data.slug !== 'string') {
       report.errors.push(`[${p.slug}] cikk-hiba: ${r.status} ${r.text.slice(0, 150)}`);
