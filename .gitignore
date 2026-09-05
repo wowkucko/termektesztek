@@ -23,13 +23,17 @@ scripts/pushed.json
 # Naplók, ideiglenes fájlok
 dev.log
 *.log
+tmp-backup-imgs.json
+tsconfig.tsbuildinfo
 *.tmp*.mjs
+.lighthouseci/
+.lhci-urls.json
+.freebuff/
 check-*.mjs
 diag-*.mjs
 dump-*.html
 test-*.mjs
 get*.mjs
-gs.mjs
 rst.mjs
 chk.mjs
 getslug.mjs
