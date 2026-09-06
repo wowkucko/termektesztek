@@ -26,7 +26,7 @@ export default async function HomePage() {
     getFeaturedPost(),
     getPublishedPosts({ take: 9 }),
     getCategoryTopPicks(),
-    getTopTags(10),
+    getTopTags(20),
   ]);
   const testOfWeek = await getTestOfTheWeek(featured?.id);
 
