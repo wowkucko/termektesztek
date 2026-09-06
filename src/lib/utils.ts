@@ -66,3 +66,49 @@ export function normalizeProductName(name?: string | null): string {
 export function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');
 }
+
+// Minden minta ékezet nélküli kisbetűs (a normalizeProductName kimenetére illeszkedik).
+const TECH_PROTECTED_NORM = /okosora|okoskarkoto|aktivitasmero|fulhallgato|fejhallgato|headset|vr.?szemuveg|okosszemuveg/i;
+
+const WHOLE_WORD_RULES: { slug: string; words: string[] }[] = [
+  {
+    slug: 'divat',
+    words: ['ruha', 'ruhak', 'kabat', 'dzseki', 'melleny', 'farmer', 'polo', 'ing', 'nadrag', 'nadragok', 'szoknya', 'taska', 'taskak', 'hatizsak', 'borond', 'napszemuveg', 'karora', 'karorak', 'ekszer', 'nyaklanc', 'penztarca', 'sal', 'sapka', 'kesztyu', 'fehernemu', 'furdoruha', 'pizsama', 'overal', 'overall', 'cipo', 'cipok', 'papucs', 'papucsok', 'csizma', 'csizmak', 'bakancs', 'bakancsok'],
+  },
+  {
+    slug: 'jatekok',
+    words: ['tarsasjatek', 'tarsas', 'kartyajatek', 'kirako', 'babahaz', 'matchbox', 'makett', 'taviranyitos', 'modellauto'],
+  },
+];
+
+const SUBSTRING_RULES: { slug: string; stems: string[] }[] = [
+  {
+    slug: 'divat',
+    stems: ['cipo', 'sneaker', 'papucs', 'csizma', 'szandal', 'bakancs', 'tornacipo', 'futocipo', 'magassarku', 'klumpa'],
+  },
+  {
+    slug: 'jatekok',
+    stems: ['figura', 'gyujtheto', 'lego', 'duplo', 'puzzle', 'pluss', 'hot wheels', 'kifesto'],
+  },
+  {
+    slug: 'szepsegapolas',
+    stems: ['hajvasalo', 'hajszarito', 'hajkefe', 'epilator', 'borotva', 'multistyler', 'airwrap', 'supersonic', 'airstrait', 'flyaway'],
+  },
+];
+
+// Visszatér a kategória-sluggal, ha a terméknév egyértelműen besorolható,
+// különben null-lal (ilyenkor a Gemini döntése marad).
+export function matchCategoryByKeywords(name?: string | null): string | null {
+  const norm = normalizeProductName(name);
+  if (!norm) return null;
+  if (TECH_PROTECTED_NORM.test(norm)) return null; // okosóra, fülhallgató stb. marad tech
+  const tokens = new Set(norm.split(' '));
+  const padded = ` ${norm} `;
+  for (const rule of WHOLE_WORD_RULES) {
+    if (rule.words.some((w) => tokens.has(w))) return rule.slug;
+  }
+  for (const rule of SUBSTRING_RULES) {
+    if (rule.stems.some((s) => padded.includes(s))) return rule.slug;
+  }
+  return null;
+}

@@ -369,7 +369,7 @@ Válaszodat KIZÁRÓLAG érvényes JSON-ként add, ebben a formátumban:
   "title": "string - vonzó, SEO-barát cím",
   "excerpt": "string - 1-2 mondatos összefoglaló",
   "content": "string - teljes markdown cikk",
-  "categorySlug": "okostelefonok | otthon-es-konyha | hordhato-eszkozok | szamitastechnika | szepsegapolas",
+  "categorySlug": "okostelefonok | otthon-es-konyha | hordhato-eszkozok | szamitastechnika | szepsegapolas | divat | jatekok - a termékhez legjobban illő (cipők/ruhatáskák -> divat, figurák/legó/társasjátékok -> jatekok, hajszárítók/hajvasalók -> szepsegapolas, okosóra/fülhallgató -> hordhato-eszkozok)",
   "tags": ["max 4 db magyar címke"],
   "pros": ["..."],
   "cons": ["..."],

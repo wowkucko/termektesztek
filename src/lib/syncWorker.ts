@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { allegroSearchProduct, allegroScrapeProduct, closeAllegroBrowser, type AllegroProductData } from '@/lib/allegro';
 import { generateArticle } from '@/lib/gemini';
 import { findAndDownloadCoverImage, searchImages, downloadImage } from '@/lib/imageSearch';
-import { slugify, truncate, parsePriceFt, extractOfferId, normalizeProductName } from '@/lib/utils';
+import { slugify, truncate, parsePriceFt, extractOfferId, normalizeProductName, matchCategoryByKeywords } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 
 // In-process singleton: csak egy worker fusson egyszerre.
@@ -364,8 +364,15 @@ async function createPostFromArticle(
   const { ensureUniquePostSlug, resolveTagIds } = await import('@/lib/data');
   const slug = await ensureUniquePostSlug(slugify(article.title || query));
 
-  // Kategória: a Gemini által választott slug, fallback "egyéb"
-  let category = await prisma.category.findUnique({ where: { slug: article.categorySlug } });
+  // Kategória (3 lépcső):
+  // 1. kulcsszó-szabály (determinisztikus: cipő -> divat, figura -> jatekok...),
+  // 2. a Gemini által választott slug,
+  // 3. fallback "egyéb" (ha egyik slug sincs a DB-ben).
+  const ruleSlug = matchCategoryByKeywords([data.name, article.productName, query].filter(Boolean).join(' '));
+  let category = ruleSlug ? await prisma.category.findUnique({ where: { slug: ruleSlug } }) : null;
+  if (!category) {
+    category = await prisma.category.findUnique({ where: { slug: article.categorySlug } });
+  }
   if (!category) {
     const fallback = await prisma.category.findFirst();
     if (!fallback) {

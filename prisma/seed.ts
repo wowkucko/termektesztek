@@ -37,13 +37,15 @@ async function main() {
     { name: 'Hordható eszközök', description: 'Okosórák, fülhallgatók, fitneszkarkötők.' },
     { name: 'Számítástechnika', description: 'Laptopok, perifériák, gaming eszközök.' },
     { name: 'Szépségápolás', description: 'Szépségápolási és testápolási eszközök tesztjei.' },
+    { name: 'Divat és lábbelik', slug: 'divat', description: 'Cipők, ruházat, táskák és divatkiegészítők tesztjei.' },
+    { name: 'Játékok és hobbi', slug: 'jatekok', description: 'Figurák, építőkockák, társasjátékok és hobbitermékek tesztjei.' },
   ];
 
   for (const c of categories) {
     await prisma.category.upsert({
       where: { name: c.name },
       update: {},
-      create: { name: c.name, slug: slugify(c.name), description: c.description },
+      create: { name: c.name, slug: (c as { slug?: string }).slug || slugify(c.name), description: c.description },
     });
   }
   console.log(`${categories.length} kategória kész.`);
