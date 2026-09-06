@@ -224,8 +224,43 @@ export function prepareSearchQuery(query: string): string {
   return q.replace(/\s+/g, ' ').trim();
 }
 
+// Többdarabos kiszerelés felismerése a címből ("2x", "2 db", "2 darabos", ...).
+// Az ilyen ajánlatok irreálisak egy termékteszthez (mintha kettőt venne a user),
+// ezért a kereső hátrasorolja, a worker pedig inkább másik kandidátust választ.
+// Szándékosan SZŰK lista: a "duo/twin/dupla" típusú szavak gyakran modellnevek
+// (TwinFry, Dual Blaze) vagy tulajdonságok (dupla kosaras), nem kiszerelések!
+// A bemenetet normalizáljuk (kisbetű, ékezet nélkül), a minták is ilyenek.
+export function isMultipackTitle(title?: string | null): boolean {
+  if (!title) return false;
+  const t = title
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/ő/g, 'o')
+    .replace(/ű/g, 'u')
+    .toLowerCase();
+  // "Nx" CSAK az első két tokenben számít kiszerelésnek ("2x Kábel"):
+  // hátrébb szinte mindig modell-utótag ("Arctis Nova 7X", "G Pro X2" stílus).
+  const toks = t.split(' ').filter(Boolean);
+  const nxFirst = /^[2-9]x$/i.test(toks[0] || '') || /^[2-9]x$/i.test(toks[1] || '');
+  const nxSpacedFirst =
+    (/^[2-9]$/.test(toks[0] || '') && toks[1] === 'x') ||
+    (/^[2-9]$/.test(toks[1] || '') && toks[2] === 'x');
+  if (nxFirst || nxSpacedFirst) return true;
+  const patterns = [
+    /\b[2-9]\s*db\b/, // "2db", "2 db", "2db-os"
+    /\b[2-9]\s*darab/, // "2 darab(os)"
+    /\b[2-9]\s*pcs\b/, // "2pcs", "2 pcs"
+    /\b[2-9]\s*pack\b/, // "2pack", "2 pack"
+    /\bparban\b/, // "párban"
+    /\b[2-9]\s*par\b/, // "2 pár"
+    /\bketszeres\b/,
+  ];
+  return patterns.some((re) => re.test(t));
+}
+
 // Keresés a /kereses?string=... oldalon, visszaadja a legjobb találat URL-jét.
 // A találatok közül a query-vel legjobban egyező címet választjuk (szó-átfedés alapján).
+// Többdarabos kiszerelést csak akkor adunk vissza, ha nincs más jelölt.
 export async function allegroSearchProduct(query: string): Promise<string | null> {
   const page = await newPage();
   try {
@@ -256,15 +291,21 @@ export async function allegroSearchProduct(query: string): Promise<string | null
       .filter((w) => w.length > 2);
     const stopWords = new Set(['készülékhez', 'készülékre', 'után', 'védőfóliával', 'tokkal', 'töltővel', 'ajándékba']);
     let best: { href: string; score: number } | null = null;
+    let bestMulti: { href: string; score: number } | null = null;
     for (const l of links.slice(0, 15)) {
       const title = l.title.toLowerCase();
       let score = 0;
       for (const w of queryWords) if (title.includes(w)) score += 1;
       // Akcesszóris szavak levétele
       if ([...stopWords].some((s) => title.includes(s))) score -= 2;
+      if (isMultipackTitle(l.title)) {
+        // Többdarabos kiszerelés: csak végső tartalék
+        if (!bestMulti || score > bestMulti.score) bestMulti = { href: l.href, score };
+        continue;
+      }
       if (!best || score > best.score) best = { href: l.href, score };
     }
-    return best ? best.href : links[0].href;
+    return best ? best.href : bestMulti ? bestMulti.href : links[0].href;
   } finally {
     await page.close().catch(() => {});
   }

@@ -1,6 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
-import { allegroSearchProduct, allegroScrapeProduct, closeAllegroBrowser, type AllegroProductData } from '@/lib/allegro';
+import { allegroSearchProduct, allegroSearchCandidates, allegroScrapeProduct, closeAllegroBrowser, isMultipackTitle, type AllegroProductData } from '@/lib/allegro';
 import { generateArticle } from '@/lib/gemini';
 import { findAndDownloadCoverImage, searchImages, downloadImage } from '@/lib/imageSearch';
 import { slugify, truncate, parsePriceFt, extractOfferId, normalizeProductName, matchCategoryByKeywords } from '@/lib/utils';
@@ -262,6 +262,37 @@ export class SyncWorker {
           data: { allegroData: JSON.stringify(data).slice(0, 900000) },
         });
         await this.log(`Allegro adatok sikeresek: ${data.name} (${data.reviews.length} vélemény)`);
+
+        // 1/a. Multipack-csere: ha a talált ajánlat többdarabos kiszerelés
+        // ("2x", "2 db" ...), megpróbálunk egydarabos kandidátust.
+        // (Egy termékteszt irreális dupla-csomagos linkkel.)
+        if (isMultipackTitle(data.name)) {
+          await this.log(`Többdarabos kiszerelés gyanú: "${data.name}" - egydarabos keresése...`);
+          try {
+            const cands = await allegroSearchCandidates(item.name, 6);
+            const single = cands.find(
+              (c) => !isMultipackTitle(c.title) && extractOfferId(c.url) !== extractOfferId(allegroUrl)
+            );
+            if (single) {
+              const retry = await allegroScrapeProduct(single.url);
+              if (!isMultipackTitle(retry.name)) {
+                allegroUrl = single.url;
+                data = retry;
+                await prisma.syncProduct.update({
+                  where: { id: item.id },
+                  data: { allegroUrl, allegroData: JSON.stringify(data).slice(0, 900000) },
+                });
+                await this.log(`Egydarabos találat: ${data.name}`);
+              } else {
+                await this.log(`A pót-jelölt is többdarabos, marad az eredeti (${data.name}).`);
+              }
+            } else {
+              await this.log('Nincs egydarabos kandidátus, marad az eredeti ajánlat.');
+            }
+          } catch (e) {
+            await this.log(`Multipack-pótlás sikertelen, marad az eredeti: ${String((e as Error).message || e).slice(0, 150)}`);
+          }
+        }
       }
 
       // 1/b. Duplikátum-védelem (még a Gemini-hívás ELŐTT, hogy ne égessük a limitet):
