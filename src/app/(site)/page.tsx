@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [featured, { posts }, picks] = await Promise.all([
+  const [featured, { posts, total }, picks] = await Promise.all([
     getFeaturedPost(),
     getPublishedPosts({ take: 9 }),
     getCategoryTopPicks(),
@@ -29,21 +29,47 @@ export default async function HomePage() {
   const testOfWeek = await getTestOfTheWeek(featured?.id);
 
   const latestPosts = posts.filter((p) => p.id !== featured?.id);
+  const latest = posts[0] || featured;
 
   return (
     <div>
       <section className="container-page pt-14 pb-10">
-        <div className="max-w-2xl">
-          <p className="font-sans text-sm font-semibold uppercase tracking-wide text-signal-600">
-            Magyar nyelvű terméktesztek
-          </p>
-          <h1 className="mt-3 font-display text-4xl font-bold leading-[1.1] text-ink sm:text-5xl">
-            Terméktesztek minden kategóriában, magyarul.
-          </h1>
-          <p className="mt-4 font-body text-lg leading-relaxed text-ink/70">
-            Független pontozás, valódi vásárlói vélemények és toplisták — hogy ne lőj mellé a
-            vásárlásnál.
-          </p>
+        <div className="grid items-center gap-8 md:grid-cols-[1fr,280px]">
+          <div className="max-w-2xl">
+            <p className="font-sans text-sm font-semibold uppercase tracking-wide text-signal-600">
+              Magyar nyelvű terméktesztek
+            </p>
+            <h1 className="mt-3 font-display text-4xl font-bold leading-[1.1] text-ink sm:text-5xl">
+              Terméktesztek minden kategóriában, magyarul.
+            </h1>
+            <p className="mt-4 font-body text-lg leading-relaxed text-ink/70">
+              Független pontozás, valódi vásárlói vélemények és toplisták — hogy ne lőj mellé a
+              vásárlásnál.
+            </p>
+          </div>
+
+          <dl className="grid grid-cols-3 gap-3 md:grid-cols-1">
+            <div className="rounded-card border border-line bg-white p-4 text-center md:text-left">
+              <dt className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/45">
+                Teszt
+              </dt>
+              <dd className="mt-1 font-display text-3xl font-bold text-ink">{total}</dd>
+            </div>
+            <div className="rounded-card border border-line bg-white p-4 text-center md:text-left">
+              <dt className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/45">
+                Kategória
+              </dt>
+              <dd className="mt-1 font-display text-3xl font-bold text-ink">{picks.length}</dd>
+            </div>
+            <div className="rounded-card border border-line bg-white p-4 text-center md:text-left">
+              <dt className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/45">
+                Frissítve
+              </dt>
+              <dd className="mt-1 font-sans text-sm font-semibold leading-snug text-ink">
+                {latest?.publishedAt ? formatDate(latest.publishedAt) : '—'}
+              </dd>
+            </div>
+          </dl>
         </div>
       </section>
 
@@ -102,7 +128,7 @@ export default async function HomePage() {
             <h2 className="font-display text-2xl font-bold text-ink">Toplisták</h2>
             <p className="hidden font-sans text-sm text-ink/50 sm:block">Kategóriák győztesei</p>
           </div>
-          <div className="container-page overflow-x-auto">
+          <div className="container-page no-scrollbar overflow-x-auto">
             <div className="flex snap-x gap-4 pb-2">
               {picks.map(({ category, pick }) => (
                 <Link

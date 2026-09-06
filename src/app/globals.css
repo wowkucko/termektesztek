@@ -62,6 +62,16 @@
   .field-input {
     @apply w-full rounded-tight border border-ink/15 bg-white px-3.5 py-2.5 font-sans text-sm text-ink placeholder:text-ink/35 focus:border-teal-500 focus:outline-none;
   }
+
+  /* Vízszintes görgetősáv elrejtése (a görgethetőség megmarad):
+     főoldali toplista-sávhoz. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Mobil menü belépő animációja */
