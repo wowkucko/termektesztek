@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { getFeaturedPost, getPublishedPosts, getTestOfTheWeek, getCategoryTopPicks } from '@/lib/data';
+import { getFeaturedPost, getPublishedPosts, getTestOfTheWeek, getCategoryTopPicks, getTopTags } from '@/lib/data';
 import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from '@/lib/seo';
 import { formatDate, formatPriceFt } from '@/lib/utils';
 import PostCard from '@/components/site/PostCard';
@@ -22,10 +22,11 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [featured, { posts, total }, picks] = await Promise.all([
+  const [featured, { posts, total }, picks, topTags] = await Promise.all([
     getFeaturedPost(),
     getPublishedPosts({ take: 9 }),
     getCategoryTopPicks(),
+    getTopTags(10),
   ]);
   const testOfWeek = await getTestOfTheWeek(featured?.id);
 
@@ -136,6 +137,42 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {topTags.length > 0 &&
+        (() => {
+          const max = Math.max(...topTags.map((t) => t.count));
+          const min = Math.min(...topTags.map((t) => t.count));
+          const sizeFor = (count: number) => {
+            if (max === min) return 'text-sm';
+            const r = (count - min) / (max - min);
+            if (r > 0.75) return 'text-lg sm:text-xl';
+            if (r > 0.4) return 'text-base sm:text-lg';
+            return 'text-sm';
+          };
+          return (
+            <section className="container-page pb-14" aria-label="Népszerű címkék">
+              <div className="mb-6 text-center">
+                <h2 className="font-display text-2xl font-bold text-ink">Népszerű címkék</h2>
+                <p className="mt-1 font-sans text-sm text-ink/50">
+                  Kattints egy témára, és listázzuk a hozzá tartozó teszteket
+                </p>
+              </div>
+              <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+                {topTags.map((t) => (
+                  <Link
+                    key={t.slug}
+                    href={`/cimke/${t.slug}`}
+                    title={`${t.count} teszt`}
+                    className={`rounded-full border border-ink/12 bg-white px-3.5 py-1.5 font-sans font-medium text-ink/75 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-500 hover:text-teal-700 hover:shadow-card sm:px-4 sm:py-2 ${sizeFor(t.count)}`}
+                  >
+                    #{t.name}
+                    <span className="ml-1.5 text-xs font-normal text-ink/40">{t.count}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
 
       {picks.length > 0 && (
         <section className="pb-14" aria-label="Toplisták">

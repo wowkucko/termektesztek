@@ -158,6 +158,26 @@ export async function getCategoryTopPicks(): Promise<
   return out;
 }
 
+// Címkefelhőhöz: a leggyakoribb címkék publikált cikkszámmal
+export async function getTopTags(take = 10): Promise<{ name: string; slug: string; count: number }[]> {
+  const groups = await prisma.postTag.groupBy({
+    by: ['tagId'],
+    where: { post: { status: 'PUBLISHED', publishedAt: { lte: new Date() } } },
+    _count: { _all: true },
+  });
+  if (groups.length === 0) return [];
+  const tags = await prisma.tag.findMany({
+    where: { id: { in: groups.map((g) => g.tagId) } },
+    select: { id: true, name: true, slug: true },
+  });
+  const byId = new Map(tags.map((t) => [t.id, t]));
+  return groups
+    .map((g) => ({ ...(byId.get(g.tagId) as { name: string; slug: string }), count: g._count._all }))
+    .filter((t) => t.name)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, take);
+}
+
 // Márkák a publikált tesztek alapján (márka-hubokhoz)
 export async function getAllBrands(): Promise<{ name: string; slug: string; count: number }[]> {
   const groups = await prisma.post.groupBy({
