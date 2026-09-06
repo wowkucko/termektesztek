@@ -5,6 +5,7 @@ import { getFeaturedPost, getPublishedPosts, getTestOfTheWeek, getCategoryTopPic
 import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from '@/lib/seo';
 import { formatDate, formatPriceFt } from '@/lib/utils';
 import PostCard from '@/components/site/PostCard';
+import TopPickStrip from '@/components/site/TopPickStrip';
 import { RatingBadge } from '@/components/site/VerdictStamp';
 
 export const revalidate = 3600;
@@ -128,41 +129,8 @@ export default async function HomePage() {
             <h2 className="font-display text-2xl font-bold text-ink">Toplisták</h2>
             <p className="hidden font-sans text-sm text-ink/50 sm:block">Kategóriák győztesei</p>
           </div>
-          <div className="container-page no-scrollbar overflow-x-auto">
-            <div className="flex snap-x gap-4 pb-2">
-              {picks.map(({ category, pick }) => (
-                <Link
-                  key={category.id}
-                  href={`/legjobb/${category.slug}`}
-                  className="group w-60 shrink-0 snap-start overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-teal-500"
-                >
-                  <div className="relative aspect-[16/10] bg-teal-50">
-                    {pick.coverImage && (
-                      <Image
-                        src={pick.coverImage}
-                        alt={pick.coverImageAlt || pick.title}
-                        fill
-                        sizes="240px"
-                        className="object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <p className="font-sans text-xs font-semibold uppercase tracking-wide text-signal-600">
-                      🏆 Legjobb {category.name.toLowerCase()}
-                    </p>
-                    <p className="mt-1 line-clamp-2 font-sans text-sm font-semibold leading-snug text-ink group-hover:text-teal-700">
-                      {[pick.productBrand, pick.productName].filter(Boolean).join(' — ') || pick.title}
-                    </p>
-                    {pick.rating != null && (
-                      <p className="mt-1 font-sans text-sm font-bold text-teal-700">
-                        {pick.rating.toFixed(1)}/10
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
+          <div className="container-page">
+            <TopPickStrip picks={picks} />
           </div>
         </section>
       )}
