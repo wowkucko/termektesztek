@@ -48,6 +48,7 @@ export default async function TagPage({ params, searchParams }: Props) {
           <p className="font-body text-ink/60">Ehhez a címkéhez még nincs publikált teszt.</p>
         ) : (
           <InfinitePostList
+            key={`tag-${tag.slug}-p${page}`}
             initial={toClientPosts(posts)}
             total={total}
             pageSize={PAGE_SIZE}

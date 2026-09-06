@@ -92,6 +92,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           <p className="font-body text-ink/60">Ebben a kategóriában még nincs publikált teszt.</p>
         ) : (
           <InfinitePostList
+            key={`kat-${category.slug}-p${page}`}
             initial={toClientPosts(posts)}
             total={total}
             pageSize={PAGE_SIZE}

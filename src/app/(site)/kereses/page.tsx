@@ -43,6 +43,7 @@ export default async function SearchPage({ searchParams }: Props) {
         )}
         {posts.length > 0 && (
           <InfinitePostList
+            key={`q-${query}-p${page}`}
             initial={toClientPosts(posts)}
             total={total}
             pageSize={PAGE_SIZE}
