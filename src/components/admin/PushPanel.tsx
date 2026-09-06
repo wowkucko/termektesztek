@@ -19,7 +19,8 @@ type PushStatus = {
 export default function PushPanel() {
   const [data, setData] = useState<PushStatus | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ pushed: PushedItem[]; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ pushed: PushedItem[]; errors: string[]; restartNeeded?: boolean } | null>(null);
+  const [restarting, setRestarting] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -44,10 +45,25 @@ export default function PushPanel() {
         body: JSON.stringify(slugs ? { slugs } : { limit: 10, ...(kind ? { kind } : {}) }),
       });
       const j = await res.json();
-      setResult({ pushed: j.pushed || [], errors: j.errors || [] });
+      setResult({ pushed: j.pushed || [], errors: j.errors || [], restartNeeded: j.restartNeeded });
       refresh();
     } finally {
       setBusy(false);
+    }
+  };
+
+  const restartRemote = async () => {
+    if (!confirm('Újraindítod az éles szervert? Kb. fél percre leáll az oldal, a PM2 automatikusan újraéleszti.')) return;
+    setRestarting(true);
+    try {
+      await fetch('/api/admin/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'restart' }),
+      }).catch(() => {});
+      setResult((r) => (r ? { ...r, restartNeeded: false } : r));
+    } finally {
+      setRestarting(false);
     }
   };
 
@@ -90,6 +106,20 @@ export default function PushPanel() {
       {result && (
         <div className="rounded-card border border-line bg-white p-5">
           <h3 className="font-display text-base font-bold text-ink">Eredmény</h3>
+          {result.restartNeeded && (
+            <div className="mt-2 rounded-tight border border-amber-200 bg-amber-50 p-3">
+              <p className="font-sans text-sm text-amber-800">
+                Új képek kerültek fel — az éles szerver csak újraindítás után szolgálja ki őket.
+              </p>
+              <button
+                onClick={restartRemote}
+                disabled={restarting}
+                className="btn-secondary mt-2 disabled:opacity-40"
+              >
+                {restarting ? '⟳ Újraindítás…' : '🔄 Éles szerver újraindítása'}
+              </button>
+            </div>
+          )}
           {result.pushed.length > 0 && (
             <ul className="mt-2 space-y-1">
               {result.pushed.map((p) => (

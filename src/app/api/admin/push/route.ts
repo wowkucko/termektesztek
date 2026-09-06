@@ -33,11 +33,38 @@ export async function GET() {
   });
 }
 
-// POST /api/admin/push { slugs?: string[], limit?: number, kind?: 'new' | 'updates' }
-// kind=new: még fel nem töltött cikkek; kind=updates: itthon módosultak frissítése.
+// POST /api/admin/push { slugs?: string[], limit?: number, kind?: 'new' | 'updates' | 'restart' }
+// kind=new: még fel nem töltött cikkek; kind=updates: itthon módosultak frissítése;
+// kind=restart: távoli szerver újraindítása (új képek után kell, különben 404-et adnak).
 // Szinkron fut le (több perc is lehet sok képnél) - csak admin hívhatja.
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
+  if (body?.kind === 'restart') {
+    const cfg = getPushConfig();
+    if (!cfg) return NextResponse.json({ ok: false, error: 'PUSH config hiányzik.' }, { status: 400 });
+    let jar = '';
+    const login = await fetch(cfg.to + '/api/admin/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: cfg.email, password: cfg.password }),
+    });
+    if (login.status !== 200) {
+      return NextResponse.json({ ok: false, error: 'Távoli login sikertelen.' }, { status: 400 });
+    }
+    const setCookie = login.headers.get('set-cookie');
+    const m = setCookie?.match(/session=[^;]+/);
+    if (m) jar = m[0];
+    const rs = await fetch(cfg.to + '/api/admin/system/restart', {
+      method: 'POST',
+      headers: jar ? { cookie: jar } : {},
+    });
+    const ok = rs.status === 200;
+    return NextResponse.json({
+      ok,
+      pushed: [],
+      errors: ok ? [] : ['Az éles újraindítás nem sikerült (frissítsd a kódot élesen update-scripttel).'],
+    });
+  }
   const slugs = Array.isArray(body?.slugs) ? body.slugs.filter((s: unknown) => typeof s === 'string') : undefined;
   const limit =
     typeof body?.limit === 'number' && body.limit > 0 && body.limit <= 50 ? Math.floor(body.limit) : 10;

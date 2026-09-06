@@ -53,6 +53,9 @@ export type PushReport = {
   pushed: { localSlug: string; remoteSlug: string; url: string }[];
   skipped: string[];
   errors: string[];
+  // Igaz, ha új képfájl került fel: az éles Next.js csak újraindítás után
+  // szolgálja ki az indulása után írt public-fájlokat (reprodukálva).
+  restartNeeded: boolean;
 };
 
 type RemoteApi = (
@@ -64,8 +67,9 @@ type RemoteApi = (
 async function ensureRemoteFiles(
   api: RemoteApi,
   files: string[]
-): Promise<{ urlMap: Record<string, string>; error?: string }> {
+): Promise<{ urlMap: Record<string, string>; error?: string; uploadedNew: boolean }> {
   const urlMap: Record<string, string> = {};
+  let uploadedNew = false;
   for (const local of files) {
     const known = await prisma.pushFile.findUnique({ where: { localPath: local } });
     if (known) {
@@ -74,7 +78,7 @@ async function ensureRemoteFiles(
     }
     const abs = path.join(process.cwd(), 'public', local);
     if (!existsSync(abs)) {
-      return { urlMap, error: `hiányzó kép, kihagyva: ${local}` };
+      return { urlMap, uploadedNew, error: `hiányzó kép, kihagyva: ${local}` };
     }
     const ext = path.extname(local).toLowerCase();
     const buf = await readFile(abs);
@@ -87,12 +91,13 @@ async function ensureRemoteFiles(
     const up = await api('/api/admin/upload', { method: 'POST', form });
     const url = typeof up.data?.url === 'string' ? up.data.url : null;
     if (up.status !== 200 || !url) {
-      return { urlMap, error: `képfeltöltés-hiba ${local}: ${up.status}` };
+      return { urlMap, uploadedNew, error: `képfeltöltés-hiba ${local}: ${up.status}` };
     }
     urlMap[local] = url;
+    uploadedNew = true;
     await prisma.pushFile.create({ data: { localPath: local, remoteUrl: url } }).catch(() => {});
   }
-  return { urlMap };
+  return { urlMap, uploadedNew };
 }
 
 function makeRewriter(urlMap: Record<string, string>) {
@@ -173,7 +178,7 @@ export async function getUpdatedPosts(limit = 50) {
 
 // Módosult cikkek frissítése távol (PUT slug alapján, új képeket is feltöltve)
 export async function pushUpdatesToLive(opts: { slugs?: string[]; limit?: number }): Promise<PushReport> {
-  const report: PushReport = { pushed: [], skipped: [], errors: [] };
+  const report: PushReport = { pushed: [], skipped: [], errors: [], restartNeeded: false };
   const cfg = getPushConfig();
   if (!cfg) {
     report.errors.push('PUSH_TO / PUSH_EMAIL / PUSH_PASSWORD nincs beállítva a .env fájlban.');
@@ -229,7 +234,8 @@ export async function pushUpdatesToLive(opts: { slugs?: string[]; limit?: number
 
   for (const { post: p, remoteSlug } of items) {
     const files = localFilesIn(p.content, p.coverImage, p.ogImage);
-    const { urlMap, error: fileError } = await ensureRemoteFiles(api, files);
+    const { urlMap, error: fileError, uploadedNew } = await ensureRemoteFiles(api, files);
+    if (uploadedNew) report.restartNeeded = true;
     if (fileError) {
       report.errors.push(`[${p.slug}] ${fileError}`);
       continue;
@@ -267,7 +273,7 @@ export async function pushPostsToLive(opts: {
   slugs?: string[];
   limit?: number;
 }): Promise<PushReport> {
-  const report: PushReport = { pushed: [], skipped: [], errors: [] };
+  const report: PushReport = { pushed: [], skipped: [], errors: [], restartNeeded: false };
   const cfg = getPushConfig();
   if (!cfg) {
     report.errors.push('PUSH_TO / PUSH_EMAIL / PUSH_PASSWORD nincs beállítva a .env fájlban.');
@@ -346,7 +352,8 @@ export async function pushPostsToLive(opts: {
   // --- cikkenként: képek, majd POST ---
   for (const p of posts) {
     const files = localFilesIn(p.content, p.coverImage, p.ogImage);
-    const { urlMap, error: fileError } = await ensureRemoteFiles(api, files);
+    const { urlMap, error: fileError, uploadedNew } = await ensureRemoteFiles(api, files);
+    if (uploadedNew) report.restartNeeded = true;
     if (fileError) {
       report.errors.push(`[${p.slug}] ${fileError}`);
       continue;
