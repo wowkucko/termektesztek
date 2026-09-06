@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { getPublishedPosts } from '@/lib/data';
 import { prisma } from '@/lib/prisma';
-import PostCard from '@/components/site/PostCard';
 import Pagination from '@/components/site/Pagination';
+import InfinitePostList from '@/components/site/InfinitePostList';
+import { toClientPosts } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
 
@@ -41,15 +42,17 @@ export default async function SearchPage({ searchParams }: Props) {
           <p className="font-body text-ink/60">Nincs találat. Próbálj meg más kulcsszót.</p>
         )}
         {posts.length > 0 && (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
+          <InfinitePostList
+            initial={toClientPosts(posts)}
+            total={total}
+            pageSize={PAGE_SIZE}
+            query={{ search: query }}
+            pagination={
+              <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath="/kereses" queryParam={query} />
+            }
+          />
         )}
       </div>
-
-      {query && <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath="/kereses" queryParam={query} />}
     </div>
   );
 }

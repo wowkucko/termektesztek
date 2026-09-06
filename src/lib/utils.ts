@@ -67,6 +67,36 @@ export function cx(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(' ');
 }
 
+// Szerveroldali Post -> kliensre küldhető JSON (dátumok ISO-stringgé alakítva).
+// Az InfinitePostList kezdeti elemeihez.
+import type { ClientPost } from '@/components/site/PostCardClient';
+
+export function toClientPosts(
+  posts: {
+    id: string;
+    slug: string;
+    title: string;
+    excerpt: string;
+    coverImage: string | null;
+    coverImageAlt: string | null;
+    rating: number | null;
+    publishedAt: Date | null;
+    category: { name: string; slug: string };
+  }[]
+): ClientPost[] {
+  return posts.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    coverImage: p.coverImage,
+    coverImageAlt: p.coverImageAlt,
+    rating: p.rating,
+    publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+    category: { name: p.category.name, slug: p.category.slug },
+  }));
+}
+
 // Minden minta ékezet nélküli kisbetűs (a normalizeProductName kimenetére illeszkedik).
 const TECH_PROTECTED_NORM = /okosora|okoskarkoto|aktivitasmero|fulhallgato|fejhallgato|headset|vr.?szemuveg|okosszemuveg/i;
 

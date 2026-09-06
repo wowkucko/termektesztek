@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation';
 import { getCategoryBySlug, getPublishedPosts } from '@/lib/data';
 import { absoluteUrl, breadcrumbJsonLd } from '@/lib/seo';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
-import PostCard from '@/components/site/PostCard';
 import Pagination from '@/components/site/Pagination';
+import InfinitePostList from '@/components/site/InfinitePostList';
+import { toClientPosts } from '@/lib/utils';
 
 export const revalidate = 3600;
 
@@ -90,15 +91,17 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         {posts.length === 0 ? (
           <p className="font-body text-ink/60">Ebben a kategóriában még nincs publikált teszt.</p>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
+          <InfinitePostList
+            initial={toClientPosts(posts)}
+            total={total}
+            pageSize={PAGE_SIZE}
+            query={{ categorySlug: category.slug }}
+            pagination={
+              <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath={`/kategoria/${category.slug}`} />
+            }
+          />
         )}
       </div>
-
-      <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath={`/kategoria/${category.slug}`} />
     </div>
   );
 }

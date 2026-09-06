@@ -3,8 +3,9 @@ import { notFound } from 'next/navigation';
 import { getTagBySlug, getPublishedPosts } from '@/lib/data';
 import { absoluteUrl } from '@/lib/seo';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
-import PostCard from '@/components/site/PostCard';
 import Pagination from '@/components/site/Pagination';
+import InfinitePostList from '@/components/site/InfinitePostList';
+import { toClientPosts } from '@/lib/utils';
 
 export const revalidate = 3600;
 
@@ -46,15 +47,17 @@ export default async function TagPage({ params, searchParams }: Props) {
         {posts.length === 0 ? (
           <p className="font-body text-ink/60">Ehhez a címkéhez még nincs publikált teszt.</p>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
+          <InfinitePostList
+            initial={toClientPosts(posts)}
+            total={total}
+            pageSize={PAGE_SIZE}
+            query={{ tagSlug: tag.slug }}
+            pagination={
+              <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath={`/cimke/${tag.slug}`} />
+            }
+          />
         )}
       </div>
-
-      <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath={`/cimke/${tag.slug}`} />
     </div>
   );
 }
