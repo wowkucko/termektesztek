@@ -195,7 +195,7 @@ export default function SyncPanel() {
                 : 'Szinkron fut'
               : 'Áll'}
         </span>
-        {control && (
+        {control?.rateLimit && (
           <span className="font-sans text-xs text-ink/50">
             Gemini: {control.rateLimit.rpmUsed}/{control.rateLimit.maxRpm} perc · {control.rateLimit.rpdUsed}/{control.rateLimit.maxRpd} nap
           </span>
