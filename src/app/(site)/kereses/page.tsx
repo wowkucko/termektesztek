@@ -26,7 +26,9 @@ export default async function SearchPage({ searchParams }: Props) {
 
   // Belső keresések naplózása (csak az 1. oldal): az adminon látszik, mire
   // keresnek találat nélkül - ezekből lesznek az új szinkron-tételek.
-  if (query && page === 1) {
+  // Sablon-kéréseket (pl. a Googlebot által szó szerint követett
+  // "?q={search_term_string}" séma-URL-t) nem naplózunk.
+  if (query && page === 1 && !/\{.*\}|search_term_string/i.test(query)) {
     await prisma.searchLog.create({ data: { query: query.slice(0, 120), resultCount: total } }).catch(() => {});
   }
 
