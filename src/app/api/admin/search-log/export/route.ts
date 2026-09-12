@@ -13,9 +13,17 @@ export async function GET(request: NextRequest) {
   const since = sinceRaw ? new Date(sinceRaw) : new Date(0);
   const sinceValid = !isNaN(since.getTime()) ? since : new Date(0);
 
-  // Régi sorok takarítása (mindig, limitáltan)
+  // Régi sorok takarítása (mindig, limitáltan) + sablon-szemét
+  // (pl. a Googlebot által szó szerint követett "?q={search_term_string}")
+  // törlése korra való tekintet nélkül.
   const cutoff = new Date(Date.now() - pruneDays * 24 * 3600 * 1000);
-  const pruned = await prisma.searchLog.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch(() => ({ count: 0 }));
+  const pruned = await prisma.searchLog
+    .deleteMany({
+      where: {
+        OR: [{ createdAt: { lt: cutoff } }, { query: { contains: '{' } }, { query: { contains: 'search_term_string' } }],
+      },
+    })
+    .catch(() => ({ count: 0 }));
 
   const rows = await prisma.searchLog.findMany({
     // >= (nem >): a határon lévő sorok ismételt küldése ártalmatlan, mert az
