@@ -14,6 +14,8 @@ import ShareButtons from '@/components/site/ShareButtons';
 import PostCard from '@/components/site/PostCard';
 import MarkdownImage from '@/components/site/MarkdownImage';
 import CommentSection from '@/components/site/CommentSection';
+import AdSlot from '@/components/site/AdSlot';
+import { slots } from '@/lib/ads';
 import { isValidElement, type ReactNode } from 'react';
 
 export const revalidate = 3600;
@@ -223,6 +225,8 @@ export default async function PostPage({ params }: Props) {
             </div>
           )}
 
+          <AdSlot slot={slots().article} label="Cikk eleji hirdetés" />
+
           {toc.length >= 2 && (
             <nav aria-label="Tartalomjegyzék" className="not-prose mb-8 rounded-card border border-line bg-white p-5">
               <p className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/45">
@@ -297,6 +301,8 @@ export default async function PostPage({ params }: Props) {
               csapatról bővebben: <Link href="/rolunk" className="font-medium text-teal-700 hover:underline">Rólunk</Link>.
             </p>
           </div>
+
+          <AdSlot slot={slots().article} label="Cikk végi hirdetés" />
 
           <CommentSection
             postId={post.id}
@@ -375,6 +381,8 @@ export default async function PostPage({ params }: Props) {
             <div className="rounded-card border border-line bg-white p-5">
               <ShareButtons url={absoluteUrl(`/blog/${post.slug}`)} title={post.title} />
             </div>
+
+            <AdSlot slot={slots().sidebar} label="Oldalsáv hirdetés" />
 
             {relevant.length > 0 && (
               <div className="rounded-card border border-line bg-white p-5">
