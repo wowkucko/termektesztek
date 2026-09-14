@@ -21,6 +21,7 @@ export default function PushPanel() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ pushed: PushedItem[]; errors: string[]; restartNeeded?: boolean } | null>(null);
   const [restarting, setRestarting] = useState(false);
+  const [notice, setNotice] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -46,6 +47,29 @@ export default function PushPanel() {
       });
       const j = await res.json();
       setResult({ pushed: j.pushed || [], errors: j.errors || [], restartNeeded: j.restartNeeded });
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const markSynced = async () => {
+    if (!confirm('Biztosan szinkronizáltként jelölöd az összes módosult cikket feltöltés nélkül? Csak akkor tedd, ha élesen már tartalmazzák a változásokat!')) return;
+    setBusy(true);
+    setResult(null);
+    setNotice('');
+    try {
+      const res = await fetch('/api/admin/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'mark-synced' }),
+      });
+      const j = await res.json();
+      if (res.ok) {
+        setNotice(`Megjelölve szinkronizáltként: ${j.marked ?? 0} cikk.`);
+      } else {
+        setResult({ pushed: [], errors: [j.error || 'Hiba'], restartNeeded: false });
+      }
       refresh();
     } finally {
       setBusy(false);
@@ -172,7 +196,19 @@ export default function PushPanel() {
           >
             {busy ? '⟳ Frissítés folyamatban…' : `🔄 ${Math.min(data.updatedCount, 10)} módosult cikk frissítése`}
           </button>
+          <div>
+            <button
+              onClick={markSynced}
+              disabled={busy}
+              className="mt-2 font-sans text-xs font-medium text-ink/50 hover:text-ink/70 disabled:opacity-40"
+            >
+              ✓ Megjelölés szinkronizáltként (feltöltés nélkül)
+            </button>
+          </div>
         </div>
+      )}
+      {notice && (
+        <div className="rounded-card border border-teal-200 bg-teal-50 px-4 py-3 font-sans text-sm text-teal-800">{notice}</div>
       )}
 
       {data.pending.length > 0 && (
