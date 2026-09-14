@@ -1,4 +1,9 @@
 import 'server-only';
+import sharp from 'sharp';
+
+// A libvips fájl-gyorsítótár kikapcsolása: különben Windows-on a bemeneti
+// fájl nyitva maradhat, és a későbbi törlés/átnevezés EPERM-mel elbukik.
+sharp.cache(false);
 
 // DuckDuckGo képkeresés a vqd token kinyerésével, majd az i.js JSON API hívással.
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
@@ -53,7 +58,46 @@ const ALLOWED_EXT: Record<string, string> = {
   'image/gif': 'gif',
 };
 
+// Kép optimalizálása helyben: max 1280px széles + WebP (q78).
+// GIF-eket nem bántjuk (animációt törölné a konverzió).
+// Visszatér az új fájlnévvel, vagy null-lal ha nincs értelme konvertálni.
+export async function optimizeImageFile(absPath: string, filename: string): Promise<string | null> {
+  try {
+    const { unlink } = await import('fs/promises');
+    const path = await import('path');
+    const ext = path.extname(filename).toLowerCase();
+    if (ext === '.gif') return null;
+    const base = path.basename(filename, ext);
+    const meta = await sharp(absPath).metadata();
+    const needsResize = (meta.width || 0) > 1280;
+    const needsConvert = ext !== '.webp';
+    if (!needsResize && !needsConvert) {
+      // Már webp és jó méret - de még mindig érdemes lehet újratömöríteni?
+      // Nem: a dupla JPEG-tömörítés csak rontana. Marad.
+      return null;
+    }
+    let pipeline = sharp(absPath).rotate();
+    if (needsResize) pipeline = pipeline.resize({ width: 1280, withoutEnlargement: true });
+    const outName = `${base}.webp`;
+    const outPath = path.join(path.dirname(absPath), outName);
+    await pipeline.webp({ quality: 78 }).toFile(outPath);
+    const { stat } = await import('fs/promises');
+    const [oldSize, newSize] = [(await stat(absPath)).size, (await stat(outPath)).size];
+    if (newSize >= oldSize && !needsResize) {
+      // Nem érte meg (pl. már eleve jól tömörített) - vissza az eredeti
+      await unlink(outPath).catch(() => {});
+      return null;
+    }
+    if (outPath !== absPath) await unlink(absPath).catch(() => {});
+    return outName;
+  } catch {
+    return null; // sérült fájl stb. - marad az eredeti
+  }
+}
+
 // Kép letöltése és mentése a /public/uploads mappába. Visszaadja a lokális URL-t.
+// Mentés után automatikusan optimalizál (átméretezés + WebP), így a tárhely
+// töredékére csökken a nyers letöltésekhez képest.
 export async function downloadImage(imageUrl: string, timeoutMs = 15000): Promise<string | null> {
   try {
     const controller = new AbortController();
@@ -74,8 +118,11 @@ export async function downloadImage(imageUrl: string, timeoutMs = 15000): Promis
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadsDir, { recursive: true });
     const filename = `sync-${randomUUID()}.${ext}`;
-    await writeFile(path.join(uploadsDir, filename), buf);
-    return `/uploads/${filename}`;
+    const absPath = path.join(uploadsDir, filename);
+    await writeFile(absPath, buf);
+    // Optimalizálás: WebP + max 1280px (ha sikerül, az új URL-t adjuk vissza)
+    const optimized = await optimizeImageFile(absPath, filename);
+    return optimized ? `/uploads/${optimized}` : `/uploads/${filename}`;
   } catch {
     return null;
   }
