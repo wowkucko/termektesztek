@@ -4,12 +4,15 @@
 // Futtatas: node scripts/compress-images.mjs [--dry-run]
 import { PrismaClient } from "@prisma/client";
 import { readdirSync, statSync, unlinkSync, existsSync } from "fs";
-import { join, extname, basename } from "path";
+import { join, extname, basename, dirname } from "path";
+import { fileURLToPath } from "url";
 import sharp from "sharp";
+sharp.cache(false); // kulonben a bemeneti fajl nyitva marad es az unlink EPERM-mel elbukik
 sharp.cache(false); // kulonben a bemeneti fajl nyitva marad es az unlink EPERM-mel elbukik
 
 const DRY = process.argv.includes("--dry-run");
-const DIR = "C:\\Users\\Tomi\\Desktop\\product-review-blog\\public\\uploads";
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const DIR = join(ROOT, "public", "uploads");
 const p = new PrismaClient();
 
 const files = readdirSync(DIR).filter((f) => {
