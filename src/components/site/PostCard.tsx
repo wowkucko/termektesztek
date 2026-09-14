@@ -36,14 +36,14 @@ export default function PostCard({ post, priority = false }: { post: PostWithRel
         </div>
 
         <Link href={`/blog/${post.slug}`}>
-          <h3 className="font-display text-lg font-semibold leading-snug text-ink group-hover:text-teal-600">
+          <h2 className="font-display text-lg font-semibold leading-snug text-ink group-hover:text-teal-600">
             {post.title}
-          </h3>
+          </h2>
         </Link>
 
         <p className="line-clamp-2 font-body text-sm leading-relaxed text-ink/65">{post.excerpt}</p>
 
-        <div className="mt-auto pt-2 font-sans text-xs text-ink/45">
+        <div className="mt-auto pt-2 font-sans text-xs text-ink/65">
           {post.publishedAt ? formatDate(post.publishedAt) : ''}
         </div>
       </div>

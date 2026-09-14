@@ -38,7 +38,7 @@ export default async function HomePage() {
       <section className="container-page pt-14 pb-10">
         <div className="grid items-center gap-8 md:grid-cols-[1fr,280px]">
           <div className="max-w-2xl">
-            <p className="font-sans text-sm font-semibold uppercase tracking-wide text-signal-600">
+            <p className="font-sans text-sm font-semibold uppercase tracking-wide text-signal-700">
               Magyar nyelvű terméktesztek
             </p>
             <h1 className="mt-3 font-display text-4xl font-bold leading-[1.1] text-ink sm:text-5xl">
@@ -50,8 +50,8 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <dl className="grid grid-cols-2 gap-3 md:grid-cols-1 md:gap-4">
-            <div className="flex items-center gap-3 rounded-card border border-line bg-white p-3 shadow-card sm:gap-4 sm:p-5">
+          <div role="list" aria-label="Oldalstatisztika" className="grid grid-cols-2 gap-3 md:grid-cols-1 md:gap-4">
+            <div role="listitem" className="flex items-center gap-3 rounded-card border border-line bg-white p-3 shadow-card sm:gap-4 sm:p-5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-600 sm:h-12 sm:w-12" aria-hidden="true">
                 <svg viewBox="0 0 24 24" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -60,12 +60,12 @@ export default async function HomePage() {
                   <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
               </span>
-              <span>
-                <dd className="font-display text-xl font-bold leading-none text-ink sm:text-3xl">{total}</dd>
-                <dt className="mt-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-ink/45 sm:text-xs">
+              <div className="flex min-w-0 flex-col">
+                <p className="order-2 mt-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-ink/65 sm:text-xs">
                   Publikált teszt
-                </dt>
-              </span>
+                </p>
+                <p className="order-1 font-display text-xl font-bold leading-none text-ink sm:text-3xl">{total}</p>
+              </div>
             </div>
             <div className="flex items-center gap-3 rounded-card border border-line bg-white p-3 shadow-card sm:gap-4 sm:p-5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-signal/10 text-signal-600 sm:h-12 sm:w-12" aria-hidden="true">
@@ -76,16 +76,16 @@ export default async function HomePage() {
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
               </span>
-              <span className="min-w-0">
-                <dd className="font-display text-sm font-bold leading-tight text-ink sm:text-xl">
-                  {latest?.publishedAt ? formatDate(latest.publishedAt) : '—'}
-                </dd>
-                <dt className="mt-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-ink/45 sm:text-xs">
+              <div className="flex min-w-0 flex-col">
+                <p className="order-2 mt-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-ink/65 sm:text-xs">
                   Legfrissebb teszt
-                </dt>
-              </span>
+                </p>
+                <p className="order-1 font-display text-sm font-bold leading-tight text-ink sm:text-xl">
+                  {latest?.publishedAt ? formatDate(latest.publishedAt) : '—'}
+                </p>
+              </div>
             </div>
-          </dl>
+          </div>
         </div>
       </section>
 
@@ -112,7 +112,7 @@ export default async function HomePage() {
 
               <div className="flex flex-col justify-center gap-4 p-8 md:p-12">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="w-fit rounded-chip bg-signal px-2.5 py-1 font-sans text-xs font-semibold text-white">
+                  <span className="w-fit rounded-chip bg-signal-600 px-2.5 py-1 font-sans text-xs font-semibold text-white">
                     A hét tesztje · {testOfWeek.category.name}
                   </span>
                   {testOfWeek.rating != null && <RatingBadge rating={testOfWeek.rating} size="lg" />}
@@ -153,7 +153,7 @@ export default async function HomePage() {
             <section className="container-page pb-14" aria-label="Népszerű címkék">
               <div className="mb-6 text-center">
                 <h2 className="font-display text-2xl font-bold text-ink">Népszerű címkék</h2>
-                <p className="mt-1 font-sans text-sm text-ink/50">
+                <p className="mt-1 font-sans text-sm text-ink/65">
                   Kattints egy témára, és listázzuk a hozzá tartozó teszteket
                 </p>
               </div>
@@ -166,7 +166,7 @@ export default async function HomePage() {
                     className={`rounded-full border border-ink/12 bg-white px-3.5 py-1.5 font-sans font-medium text-ink/75 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-500 hover:text-teal-700 hover:shadow-card sm:px-4 sm:py-2 ${sizeFor(t.count)}`}
                   >
                     #{t.name}
-                    <span className="ml-1.5 text-xs font-normal text-ink/40">{t.count}</span>
+                    <span className="ml-1.5 text-xs font-normal text-ink/65">{t.count}</span>
                   </Link>
                 ))}
               </div>
@@ -178,7 +178,7 @@ export default async function HomePage() {
         <section className="pb-14" aria-label="Toplisták">
           <div className="container-page mb-6 flex items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-bold text-ink">Toplisták</h2>
-            <p className="hidden font-sans text-sm text-ink/50 sm:block">Kategóriák győztesei</p>
+            <p className="hidden font-sans text-sm text-ink/65 sm:block">Kategóriák győztesei</p>
           </div>
           <div className="container-page">
             <TopPickStrip picks={picks} />
@@ -220,7 +220,7 @@ export default async function HomePage() {
               </h2>
               <p className="font-body text-base leading-relaxed text-ink/65">{featured.excerpt}</p>
               {featured.publishedAt && (
-                <p className="font-sans text-xs text-ink/45">{formatDate(featured.publishedAt)}</p>
+                <p className="font-sans text-xs text-ink/65">{formatDate(featured.publishedAt)}</p>
               )}
             </div>
           </Link>
@@ -233,7 +233,7 @@ export default async function HomePage() {
         </div>
 
         {latestPosts.length === 0 ? (
-          <p className="font-body text-ink/60">
+          <p className="font-body text-ink/65">
             Még nincs publikált bejegyzés. Jelentkezz be az admin felületre az első cikk
             felvételéhez.
           </p>

@@ -77,7 +77,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         className="mt-6 flex items-center justify-between gap-4 rounded-card border border-signal/30 bg-signal/5 p-5 transition-colors hover:border-signal"
       >
         <span>
-          <span className="font-sans text-xs font-semibold uppercase tracking-wide text-signal-600">
+          <span className="font-sans text-xs font-semibold uppercase tracking-wide text-signal-700">
             🏆 Toplista
           </span>
           <span className="mt-0.5 block font-display text-lg font-bold text-ink">
@@ -89,7 +89,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
       <div className="mt-10">
         {posts.length === 0 ? (
-          <p className="font-body text-ink/60">Ebben a kategóriában még nincs publikált teszt.</p>
+          <p className="font-body text-ink/65">Ebben a kategóriában még nincs publikált teszt.</p>
         ) : (
           <InfinitePostList
             key={`kat-${category.slug}-p${page}`}

@@ -88,7 +88,7 @@ export default async function ToplistPage({ params, searchParams }: Props) {
 
       <Breadcrumbs items={crumbs} />
 
-      <p className="mt-4 font-sans text-sm font-semibold uppercase tracking-wide text-signal-600">
+      <p className="mt-4 font-sans text-sm font-semibold uppercase tracking-wide text-signal-700">
         🏆 Toplista · {year}
       </p>
       <h1 className="mt-2 max-w-3xl font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
@@ -125,7 +125,7 @@ export default async function ToplistPage({ params, searchParams }: Props) {
       )}
 
       {top.length === 0 ? (
-        <p className="mt-10 font-body text-ink/60">
+        <p className="mt-10 font-body text-ink/65">
           Ebben a kategóriában még nincs értékelt teszt. Nézd meg az összes{' '}
           <Link href={`/kategoria/${category.slug}`} className="font-medium text-teal-600 hover:underline">
             {catName} tesztet
@@ -138,7 +138,7 @@ export default async function ToplistPage({ params, searchParams }: Props) {
           <div className="mt-4 overflow-x-auto rounded-card border border-line bg-white">
             <table className="w-full min-w-[560px] text-left">
               <thead>
-                <tr className="border-b border-line font-sans text-xs uppercase tracking-wide text-ink/40">
+                <tr className="border-b border-line font-sans text-xs uppercase tracking-wide text-ink/65">
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">Termék</th>
                   <th className="px-4 py-3 font-medium">Pontszám</th>

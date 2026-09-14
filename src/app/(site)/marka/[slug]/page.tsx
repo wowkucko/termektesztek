@@ -78,7 +78,7 @@ export default async function BrandPage({ params }: Props) {
       </p>
 
       {posts.length === 0 ? (
-        <p className="mt-10 font-body text-ink/60">Ebben a márkában még nincs publikált teszt.</p>
+        <p className="mt-10 font-body text-ink/65">Ebben a márkában még nincs publikált teszt.</p>
       ) : (
         <div className="mt-10 space-y-6">
           {posts.map((p, i) => (
@@ -103,7 +103,7 @@ export default async function BrandPage({ params }: Props) {
                     <span className="font-display text-lg font-bold text-ink">{i + 1}.</span>
                     {p.rating != null && <RatingBadge rating={p.rating} size="sm" />}
                     {p.priceFt != null && formatPriceFt(p.priceFt) && (
-                      <span className="font-sans text-sm text-ink/55">{formatPriceFt(p.priceFt)}</span>
+                      <span className="font-sans text-sm text-ink/65">{formatPriceFt(p.priceFt)}</span>
                     )}
                   </div>
                   <Link href={`/blog/${p.slug}`} className="group">

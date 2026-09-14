@@ -27,7 +27,7 @@ export default function AdSlot({ slot, format = 'auto', label }: { slot: string;
 
   return (
     <div aria-label={label} className="not-prose my-8 overflow-hidden rounded-card border border-line bg-white/60">
-      <p className="px-4 pt-2 font-sans text-[10px] uppercase tracking-wide text-ink/35">Hirdetés</p>
+      <p className="px-4 pt-2 font-sans text-[10px] uppercase tracking-wide text-ink/65">Hirdetés</p>
       <ins
         className="adsbygoogle block"
         style={{ display: 'block' }}

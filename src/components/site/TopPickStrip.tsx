@@ -81,7 +81,7 @@ export default function TopPickStrip({ picks }: { picks: TopPick[] }) {
               )}
             </div>
             <div className="p-4">
-              <p className="font-sans text-xs font-semibold uppercase tracking-wide text-signal-600">
+              <p className="font-sans text-xs font-semibold uppercase tracking-wide text-signal-700">
                 🏆 Legjobb {category.name.toLowerCase()}
               </p>
               <p className="mt-1 line-clamp-2 font-sans text-sm font-semibold leading-snug text-ink group-hover:text-teal-700">

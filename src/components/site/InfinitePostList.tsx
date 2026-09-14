@@ -93,15 +93,15 @@ export default function InfinitePostList({
       {isMobile ? (
         <div ref={sentinelRef} aria-hidden="true" className="flex min-h-[4rem] items-center justify-center py-6">
           {loading ? (
-            <span className="flex items-center gap-2 font-sans text-sm text-ink/50">
+            <span className="flex items-center gap-2 font-sans text-sm text-ink/65">
               <span className="block h-5 w-5 animate-spin rounded-full border-2 border-teal-500/30 border-t-teal-500" aria-hidden="true" />
               További tesztek betöltése…
             </span>
           ) : hasMore ? (
-            <span className="font-sans text-xs text-ink/35">Görgess a folytatásért ↓</span>
+            <span className="font-sans text-xs text-ink/65">Görgess a folytatásért ↓</span>
           ) : (
             items.length > 0 && (
-              <span className="font-sans text-xs text-ink/35">— Vége a listának —</span>
+              <span className="font-sans text-xs text-ink/65">— Vége a listának —</span>
             )
           )}
         </div>

@@ -48,7 +48,7 @@
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-tight bg-signal px-5 py-3 font-sans text-sm font-semibold text-white shadow-stamp transition-transform hover:-translate-y-0.5 hover:bg-signal-600;
+    @apply inline-flex items-center justify-center gap-2 rounded-tight bg-signal-600 px-5 py-3 font-sans text-sm font-semibold text-white shadow-stamp transition-transform hover:-translate-y-0.5 hover:bg-signal-700;
   }
 
   .btn-secondary {
@@ -60,7 +60,7 @@
   }
 
   .field-input {
-    @apply w-full rounded-tight border border-ink/15 bg-white px-3.5 py-2.5 font-sans text-sm text-ink placeholder:text-ink/35 focus:border-teal-500 focus:outline-none;
+    @apply w-full rounded-tight border border-ink/15 bg-white px-3.5 py-2.5 font-sans text-sm text-ink placeholder:text-ink/65 focus:border-teal-500 focus:outline-none;
   }
 
   /* Vízszintes görgetősáv elrejtése (a görgethetőség megmarad):
@@ -111,13 +111,13 @@
   vertical-align: baseline;
   font-size: 0.72rem;
   font-style: italic;
-  color: rgba(30, 30, 30, 0.42);
+  color: rgba(30, 30, 30, 0.68);
   letter-spacing: 0.01em;
   line-height: 1;
 }
 
 .post-content sub.img-source a {
-  color: rgba(13, 148, 136, 0.75);
+  color: #08423C;
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 2px;

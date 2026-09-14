@@ -20,7 +20,7 @@ function Stars({ value, onPick }: { value: number | null; onPick?: (v: number) =
           disabled={!onPick}
           onClick={() => onPick?.(n)}
           aria-label={`${n} csillag`}
-          className={`text-xl leading-none ${n <= (value ?? 0) ? 'text-signal' : 'text-ink/20'} ${onPick ? 'cursor-pointer hover:scale-110' : ''}`}
+          className={`text-xl leading-none ${n <= (value ?? 0) ? 'text-signal' : 'text-ink/20'} ${onPick ? 'cursor-pointer p-1 hover:scale-110' : ''}`}
         >
           ★
         </button>
@@ -81,7 +81,7 @@ export default function CommentSection({
     <section aria-label="Hozzászólások" className="not-prose my-8">
       <h2 id="hozzaszolasok" className="scroll-mt-28 font-display text-xl font-bold text-ink">
         Hozzászólások{' '}
-        <span className="font-sans text-sm font-normal text-ink/45">
+        <span className="font-sans text-sm font-normal text-ink/65">
           ({comments.length}
           {avg.avg != null && ` · olvasói átlag: ${avg.avg.toFixed(1)}/5`})
         </span>
@@ -90,7 +90,7 @@ export default function CommentSection({
       <form onSubmit={submit} className="mt-4 rounded-card border border-line bg-white p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="font-sans text-xs font-semibold text-ink/60">Név *</span>
+            <span className="font-sans text-xs font-semibold text-ink/65">Név *</span>
             <input
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
@@ -100,14 +100,14 @@ export default function CommentSection({
             />
           </label>
           <div>
-            <span className="font-sans text-xs font-semibold text-ink/60">Értékelésed (opcionális)</span>
+            <span className="font-sans text-xs font-semibold text-ink/65">Értékelésed (opcionális)</span>
             <div className="mt-1.5">
               <Stars value={rating} onPick={setRating} />
             </div>
           </div>
         </div>
         <label className="mt-4 block">
-          <span className="font-sans text-xs font-semibold text-ink/60">Hozzászólás *</span>
+          <span className="font-sans text-xs font-semibold text-ink/65">Hozzászólás *</span>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -137,7 +137,7 @@ export default function CommentSection({
 
       <div className="mt-6 space-y-4">
         {comments.length === 0 ? (
-          <p className="font-body text-sm text-ink/55">
+          <p className="font-body text-sm text-ink/65">
             Még nincs hozzászólás. Legyél te az első, aki megosztja a tapasztalatát!
           </p>
         ) : (
@@ -146,7 +146,7 @@ export default function CommentSection({
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="font-sans text-sm font-semibold text-ink">{c.author}</span>
                 {c.rating != null && <Stars value={c.rating} />}
-                <span className="font-sans text-xs text-ink/40">
+                <span className="font-sans text-xs text-ink/65">
                   {new Date(c.createdAt).toLocaleString('hu-HU', { dateStyle: 'medium', timeStyle: 'short' })}
                 </span>
               </div>

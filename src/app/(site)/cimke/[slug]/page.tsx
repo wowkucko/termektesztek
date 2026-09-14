@@ -45,7 +45,7 @@ export default async function TagPage({ params, searchParams }: Props) {
 
       <div className="mt-10">
         {posts.length === 0 ? (
-          <p className="font-body text-ink/60">Ehhez a címkéhez még nincs publikált teszt.</p>
+          <p className="font-body text-ink/65">Ehhez a címkéhez még nincs publikált teszt.</p>
         ) : (
           <InfinitePostList
             key={`tag-${tag.slug}-p${page}`}

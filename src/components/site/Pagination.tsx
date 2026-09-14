@@ -32,7 +32,7 @@ export default function Pagination({
       >
         Előző
       </Link>
-      <span className="px-3 py-2 text-ink/60">
+      <span className="px-3 py-2 text-ink/65">
         {page}. / {totalPages}
       </span>
       <Link

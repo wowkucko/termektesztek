@@ -108,7 +108,7 @@ export default function SearchForm({ inlineResults = false }: { inlineResults?: 
           Keresés a tesztek között
         </label>
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden="true">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/65" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" />
@@ -129,7 +129,7 @@ export default function SearchForm({ inlineResults = false }: { inlineResults?: 
             }}
             onKeyDown={handleKeyDown}
             placeholder="Keresés a tesztek között…"
-            className="w-full rounded-full border border-ink/15 bg-white py-2 pl-9 pr-8 font-sans text-sm text-ink placeholder:text-ink/35 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="w-full rounded-full border border-ink/15 bg-white py-2 pl-9 pr-8 font-sans text-sm text-ink placeholder:text-ink/65 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
           />
           {loading && (
             <span className="absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
@@ -150,7 +150,7 @@ export default function SearchForm({ inlineResults = false }: { inlineResults?: 
           }
         >
           {results.length === 0 ? (
-            <p className="px-4 py-3 font-sans text-sm text-ink/50">
+            <p className="px-4 py-3 font-sans text-sm text-ink/65">
               Nincs találat erre: „{query.trim()}”
             </p>
           ) : (
@@ -182,7 +182,7 @@ export default function SearchForm({ inlineResults = false }: { inlineResults?: 
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-sans text-sm font-medium text-ink">{r.title}</span>
-                      <span className="block truncate font-sans text-xs text-ink/45">
+                      <span className="block truncate font-sans text-xs text-ink/65">
                         {r.categoryName}
                         {r.rating != null && <span className="font-semibold text-teal-700"> · {r.rating.toFixed(1)}/10</span>}
                       </span>

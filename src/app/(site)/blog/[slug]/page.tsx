@@ -159,7 +159,7 @@ export default async function PostPage({ params }: Props) {
           {post.title}
         </h1>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-sans text-sm text-ink/50">
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-sans text-sm text-ink/65">
           {post.publishedAt && <span>{formatDate(post.publishedAt)}</span>}
           {showUpdated && post.publishedAt && (
             <>
@@ -207,7 +207,7 @@ export default async function PostPage({ params }: Props) {
                 {[post.productBrand, post.productName].filter(Boolean).join(' — ') || post.productName}
               </p>
               {priceLabel && (
-                <p className="mt-2 font-sans text-sm text-ink/60">
+                <p className="mt-2 font-sans text-sm text-ink/65">
                   Aktuális ár: <span className="font-bold text-ink">{priceLabel}</span>{' '}
                   <span className="text-xs">(tájékoztató jellegű)</span>
                 </p>
@@ -229,7 +229,7 @@ export default async function PostPage({ params }: Props) {
 
           {toc.length >= 2 && (
             <nav aria-label="Tartalomjegyzék" className="not-prose mb-8 rounded-card border border-line bg-white p-5">
-              <p className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/45">
+              <p className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/65">
                 A cikk tartalma
               </p>
               <ul className="mt-3 space-y-1.5">
@@ -323,7 +323,7 @@ export default async function PostPage({ params }: Props) {
                 <Link
                   key={tag.id}
                   href={`/cimke/${tag.slug}`}
-                  className="rounded-chip border border-ink/15 px-3 py-1 font-sans text-xs text-ink/60 hover:border-teal-500 hover:text-teal-600"
+                  className="rounded-chip border border-ink/15 px-3 py-1 font-sans text-xs text-ink/65 hover:border-teal-500 hover:text-teal-600"
                 >
                   #{tag.name}
                 </Link>
@@ -351,7 +351,7 @@ export default async function PostPage({ params }: Props) {
                   </p>
                 )}
                 {priceLabel && (
-                  <p className="mt-2 font-sans text-sm text-ink/60">
+                  <p className="mt-2 font-sans text-sm text-ink/65">
                     Aktuális ár: <span className="font-bold text-ink">{priceLabel}</span>
                   </p>
                 )}
@@ -386,7 +386,7 @@ export default async function PostPage({ params }: Props) {
 
             {relevant.length > 0 && (
               <div className="rounded-card border border-line bg-white p-5">
-                <p className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/45">
+                <p className="font-sans text-xs font-semibold uppercase tracking-wide text-ink/65">
                   Kapcsolódó tesztek
                 </p>
                 <ul className="mt-3 space-y-3">
@@ -396,7 +396,7 @@ export default async function PostPage({ params }: Props) {
                         <p className="font-sans text-sm font-medium leading-snug text-ink transition-colors group-hover:text-teal-600">
                           {p.title}
                         </p>
-                        <p className="mt-0.5 flex items-center gap-1.5 font-sans text-xs text-ink/45">
+                        <p className="mt-0.5 flex items-center gap-1.5 font-sans text-xs text-ink/65">
                           {p.category.name}
                           {p.rating != null && (
                             <>

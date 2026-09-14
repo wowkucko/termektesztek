@@ -75,7 +75,7 @@ export default function ShareButtons({ url, title }: { url: string; title: strin
 
   return (
     <div className="flex flex-wrap items-center gap-2.5 font-sans text-sm">
-      <span className="w-full font-semibold text-ink/60">Oszd meg:</span>
+      <span className="w-full font-semibold text-ink/65">Oszd meg:</span>
 
       <Circle href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`} label="Megosztás Facebookon" bg="bg-[#1877F2]">
         <span className="font-display text-lg font-bold leading-none">f</span>

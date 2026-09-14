@@ -27,7 +27,7 @@ export function RatingBadge({
     <span
       className={cx(
         'inline-flex shrink-0 items-center gap-1.5 rounded-chip font-sans font-bold leading-none text-white',
-        isLg ? 'bg-signal px-4 py-2.5 text-xl' : 'bg-signal px-2.5 py-1.5 text-sm',
+        isLg ? 'bg-signal-600 px-4 py-2.5 text-xl' : 'bg-signal-600 px-2.5 py-1.5 text-sm',
         className
       )}
       aria-label={`Értékelés: ${rating.toFixed(1)} a 10-ből (${ratingWord(rating)})`}
@@ -61,7 +61,7 @@ export default function VerdictStamp({
   return (
     <div
       className={cx(
-        'inline-flex -rotate-6 flex-col items-center justify-center rounded-full border-2 border-dashed border-white bg-signal text-white shadow-stamp',
+        'inline-flex -rotate-6 flex-col items-center justify-center rounded-full border-2 border-dashed border-white bg-signal-600 text-white shadow-stamp',
         isLg ? 'h-32 w-32 gap-0.5' : 'h-16 w-16 gap-0',
         animated && 'animate-stampIn'
       )}

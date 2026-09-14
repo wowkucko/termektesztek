@@ -35,13 +35,13 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <div className="container-page py-10">
       <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Keresés</h1>
-      <p className="mt-3 font-body text-ink/60">
+      <p className="mt-3 font-body text-ink/65">
         {query ? `Találatok erre: „${query}”` : 'Írj be egy keresőszót a fejléc keresőmezőjébe.'}
       </p>
 
       <div className="mt-10">
         {query && posts.length === 0 && (
-          <p className="font-body text-ink/60">Nincs találat. Próbálj meg más kulcsszót.</p>
+          <p className="font-body text-ink/65">Nincs találat. Próbálj meg más kulcsszót.</p>
         )}
         {posts.length > 0 && (
           <InfinitePostList

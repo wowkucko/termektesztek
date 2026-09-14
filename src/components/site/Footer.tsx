@@ -71,7 +71,7 @@ export default async function Footer() {
       </div>
 
       <div className="border-t border-line py-6">
-        <p className="container-page font-sans text-xs text-ink/45">
+        <p className="container-page font-sans text-xs text-ink/65">
           © {year} {SITE_NAME}. Minden jog fenntartva.
         </p>
       </div>

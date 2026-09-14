@@ -40,21 +40,21 @@ export default function SeasonHub({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       <Breadcrumbs items={crumbs} />
 
-      <p className="mt-4 font-sans text-sm font-semibold uppercase tracking-wide text-signal-600">{kicker}</p>
+      <p className="mt-4 font-sans text-sm font-semibold uppercase tracking-wide text-signal-700">{kicker}</p>
       <h1 className="mt-2 max-w-3xl font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
         {title}
       </h1>
       <p className="mt-4 max-w-3xl font-body text-base leading-relaxed text-ink/70">{intro}</p>
 
       {posts.length === 0 ? (
-        <p className="mt-10 font-body text-ink/60">Hamarosan érkeznek az ajánlatok.</p>
+        <p className="mt-10 font-body text-ink/65">Hamarosan érkeznek az ajánlatok.</p>
       ) : (
         <>
           <h2 className="mt-12 font-display text-2xl font-bold text-ink">A mi választásunk</h2>
           <div className="mt-4 overflow-x-auto rounded-card border border-line bg-white">
             <table className="w-full min-w-[560px] text-left">
               <thead>
-                <tr className="border-b border-line font-sans text-xs uppercase tracking-wide text-ink/40">
+                <tr className="border-b border-line font-sans text-xs uppercase tracking-wide text-ink/65">
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">Termék</th>
                   <th className="px-4 py-3 font-medium">Pontszám</th>
@@ -140,7 +140,7 @@ export default function SeasonHub({
             ))}
           </div>
 
-          <p className="mt-10 max-w-3xl font-body text-sm text-ink/55">
+          <p className="mt-10 max-w-3xl font-body text-sm text-ink/65">
             Az árak tájékoztató jellegűek és idővel változhatnak — a gombra kattintva mindig az
             aktuális árat látod a webshopban. További rangsorok:{' '}
             <Link href="/" className="font-medium text-teal-600 hover:underline">
