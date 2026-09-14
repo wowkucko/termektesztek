@@ -2,6 +2,10 @@
 // DB-hivatkozasok atirasa (content, cover, og) + PushFile terkep frissitese.
 // Csak akkor cserel, ha az uj fajl kisebb. GIF-eket kihagyja.
 // Futtatas: node scripts/compress-images.mjs [--dry-run]
+// FONTOS: sima `node` nem tolti be a .env-t, ezert:
+//   itthon (dev-szerver mellett felesleges) / élesen így futtasd:
+//   node --env-file=.env scripts/compress-images.mjs
+// Utána PM2 restart kell (az új fájlokat csak újraindítás után szolgálja ki a prod Next.js)!
 import { PrismaClient } from "@prisma/client";
 import { readdirSync, statSync, unlinkSync, existsSync } from "fs";
 import { join, extname, basename, dirname } from "path";
