@@ -33,12 +33,22 @@ export async function GET() {
   });
 }
 
-// POST /api/admin/push { slugs?: string[], limit?: number, kind?: 'new' | 'updates' | 'restart' }
+// POST /api/admin/push { slugs?: string[], limit?: number, kind?: 'new' | 'updates' | 'restart' | 'mark-synced' }
 // kind=new: még fel nem töltött cikkek; kind=updates: itthon módosultak frissítése;
 // kind=restart: távoli szerver újraindítása (új képek után kell, különben 404-et adnak).
+// kind=mark-synced: a módosultnak jelölt tételek jóváhagyása push nélkül
+// (pl. tömeges technikai átírás után, ami élesen már megvan) - csak a könyvjelzőt lépteti.
 // Szinkron fut le (több perc is lehet sok képnél) - csak admin hívhatja.
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
+  if (body?.kind === 'mark-synced') {
+    const slugs = Array.isArray(body?.slugs) ? body.slugs.filter((s: unknown) => typeof s === 'string') : undefined;
+    const r = await prisma.pushRecord.updateMany({
+      where: slugs && slugs.length > 0 ? { postSlug: { in: slugs } } : {},
+      data: { pushedAt: new Date() },
+    });
+    return NextResponse.json({ ok: true, pushed: [], errors: [], marked: r.count });
+  }
   if (body?.kind === 'restart') {
     const cfg = getPushConfig();
     if (!cfg) return NextResponse.json({ ok: false, error: 'PUSH config hiányzik.' }, { status: 400 });

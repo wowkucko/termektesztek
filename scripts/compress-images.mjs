@@ -100,8 +100,19 @@ if (!DRY && moves.length > 0) {
     }
   }
   console.log(`DB-ben frissitve: ${touched} cikk`);
+  // PushFile térkép: a helyi útvonal mellett a TÁVOLI URL kiterjesztését is
+  // igazítjuk, ha ugyanaz az uuid (a push tóvábbhasznosítja a meglévő távoli
+  // fájlt - halott .jpg URL-t adna vissza, miközben élesen már .webp van).
   for (const [from, to] of moves) {
     await p.pushFile.updateMany({ where: { localPath: from }, data: { localPath: to } });
+    const fromBase = basename(from, extname(from));
+    const toBase = basename(to, extname(to));
+    if (fromBase === toBase) {
+      await p.pushFile.updateMany({
+        where: { localPath: to, remoteUrl: from },
+        data: { remoteUrl: to },
+      });
+    }
   }
   console.log("PushFile terkep frissitve");
 }

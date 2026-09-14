@@ -259,14 +259,16 @@ export async function pushUpdatesToLive(opts: { slugs?: string[]; limit?: number
 
 export async function getPendingPosts(limit = 50) {
   const pushed = await prisma.pushRecord.findMany({ select: { postSlug: true } });
-  const pushedSet = new Set(pushed.map((p) => p.postSlug));
+  const pushedSlugs = pushed.map((p) => p.postSlug);
+  // Kizárás az adatbázisban (notIn), különben a take-ablak levágja az új
+  // cikkeket, ha az összes sor meghaladja a limitet.
   const posts = await prisma.post.findMany({
-    where: { status: 'PUBLISHED' },
+    where: { status: 'PUBLISHED', ...(pushedSlugs.length > 0 ? { slug: { notIn: pushedSlugs } } : {}) },
     include: { category: true },
     orderBy: { publishedAt: 'asc' },
-    take: 500,
+    take: Math.max(limit, 1),
   });
-  return posts.filter((p) => !pushedSet.has(p.slug)).slice(0, limit);
+  return posts;
 }
 
 export async function pushPostsToLive(opts: {
@@ -317,19 +319,22 @@ export async function pushPostsToLive(opts: {
     return report;
   }
 
-  // --- pusholandó cikkek ---
+  // --- pusholandó cikkek (kizárás DB-ben, hogy a take-ablak ne vágja le az újakat) ---
   const pushed = await prisma.pushRecord.findMany({ select: { postSlug: true } });
-  const pushedSet = new Set(pushed.map((p) => p.postSlug));
+  const pushedSlugs = pushed.map((p) => p.postSlug);
   let posts = await prisma.post.findMany({
     where: {
       status: 'PUBLISHED',
-      ...(opts.slugs && opts.slugs.length > 0 ? { slug: { in: opts.slugs } } : {}),
+      ...(opts.slugs && opts.slugs.length > 0
+        ? { slug: { in: opts.slugs } }
+        : pushedSlugs.length > 0
+          ? { slug: { notIn: pushedSlugs } }
+          : {}),
     },
     include: { category: true, tags: { include: { tag: true } } },
     orderBy: { publishedAt: 'asc' },
     take: 500,
   });
-  if (!opts.slugs) posts = posts.filter((p) => !pushedSet.has(p.slug));
   if (opts.limit) posts = posts.slice(0, opts.limit);
   if (posts.length === 0) {
     report.skipped.push('Nincs feltöltendő cikk (minden publikált már fenn van).');
