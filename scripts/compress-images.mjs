@@ -41,13 +41,16 @@ for (let i = 0; i < files.length; i++) {
     if (needsResize) pipe = pipe.resize({ width: 1280, withoutEnlargement: true });
     const outName = DRY ? `${basename(f, ext)}.dry.webp` : `${basename(f, ext)}.webp`;
     if (!DRY && outName === f && !needsResize) { skipped++; continue; }
-    const outAbs = join(DIR, outName);
-    await pipe.webp({ quality: 78 }).toFile(outAbs);
+    // Ha a kimenet megegyezne a bemenettel (túl nagy .webp átméretezése),
+    // ideiglenes fájlba írunk, majd visszanevezzük (a sharp nem írhat önmagába).
+    const inPlace = !DRY && outName === f;
+    const targetAbs = inPlace ? join(DIR, `${outName}.tmp`) : join(DIR, outName);
+    await pipe.webp({ quality: 78 }).toFile(targetAbs);
     const oldSize = statSync(abs).size;
-    const newSize = statSync(outAbs).size;
+    const newSize = statSync(targetAbs).size;
     totalBefore += oldSize;
     if (newSize >= oldSize && !needsResize) {
-      unlinkSync(outAbs);
+      unlinkSync(targetAbs);
       totalAfter += oldSize;
       skipped++;
       continue;
@@ -55,8 +58,12 @@ for (let i = 0; i < files.length; i++) {
     totalAfter += newSize;
     converted++;
     if (DRY) {
-      unlinkSync(outAbs); // dry-run: a probafajlt eldobjuk
-    } else if (outAbs !== abs) {
+      unlinkSync(targetAbs); // dry-run: a probafajlt eldobjuk
+    } else if (inPlace) {
+      // Visszanevezes az eredeti nevre (kisebb lett) - DB-modositas nem kell
+      const { renameSync } = await import("fs");
+      renameSync(targetAbs, abs);
+    } else {
       // Előbb a DB-térkép, és csak utána a törlés: ha a törlés zárolás
       // miatt elbukik (EPERM), a DB akkor is a jó (új) URL-re mutat,
       // a régi fájl pedig legközelebb árvaként törölhető.
