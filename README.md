@@ -357,14 +357,25 @@ URL-jét, és nyomd meg az **„Indexelés kérése”** gombot.
 ## 7. Teljesítmény-ellenőrzés (Lighthouse CI)
 
 A `lighthouse:ci` script friss production builden lefuttatja a Lighthouse auditot a
-főbb oldalakra (főoldal, legfrissebb cikk, egy kategória, egy címke — az URL-eket a
-`scripts/resolve-audit-urls.mjs` oldja fel az adatbázisból), és a `lighthouserc.js`
-`assert` szakaszában lévő küszöbértékekhez hasonlítja:
+főbb oldalakra (főoldal, legfrissebb cikk, a legtöbb cikket tartalmazó kategória és
+címke — az URL-eket a `scripts/resolve-audit-urls.ts` oldja fel az adatbázisból), és a
+`lighthouserc.js` `assert` szakaszában lévő küszöbértékekhez hasonlítja:
 
 - **Performance ≥ 80**
 - **Accessibility ≥ 90**
 - **Best Practices ≥ 90**
 - **SEO ≥ 95**
+
+A crawl-budget szabály (6.1) alatti, kevés cikkes listaoldalakon a Lighthouse
+`is-crawlable` auditja jogosan bukik — ott a `noindex` nem hiba, hanem szándékos. A
+resolver ezért ezeket külön jelöli, és a `lighthouserc.js` **`assertMatrix`-szal**
+URL-enként állítja a küszöböt: a szándékosan noindex oldalakra a SEO-küszöb 0.6 (ez
+pontosan az `is-crawlable` súlyát engedi el), minden más oldalra a szigorú 0.95 marad,
+és a minta negatív lookahead-del fedi le a maradék URL-eket, hogy egy oldal se ússzon
+meg ellenőrzés nélkül. (A sima `assertions` érték csak egyetlen `[szint, beállítások]`
+párt fogad el — listát adva a Lighthouse CI csendben a saját alapértelmezett 0.9-ére
+esik vissza, ezért kell a mátrix.) Ha a fejlesztői/éles adatbázisban van már elég cikk,
+a resolver egyet sem jelöl meg, és minden vizsgált oldalra a 0.95-ös küszöb érvényes.
 
 A mérés **valódi (devtools) throttlinggal** történik: a Chrome ténylegesen 4×
 CPU-lassítással és mobil hálózati korlátozással tölti be az oldalt, tehát a pontszámok
