@@ -1,10 +1,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { PostWithRelations } from '@/lib/data';
+import { isAdultContent } from '@/lib/adultContent';
 import { formatDate } from '@/lib/utils';
 import { RatingBadge } from './VerdictStamp';
+import AgeBadge from './AgeBadge';
 
 export default function PostCard({ post, priority = false }: { post: PostWithRelations; priority?: boolean }) {
+  // 18+ (szexuális jellegű) cikk: már a listában jelöljük, hogy a látogató
+  // tudja, miért fog korhatár-kapu fogadni a cikkoldalon.
+  const adult = isAdultContent(post);
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-card border border-line bg-white transition-shadow hover:shadow-card">
       <Link href={`/blog/${post.slug}`} className="relative block aspect-[4/3] overflow-hidden bg-teal-50">
@@ -26,12 +32,15 @@ export default function PostCard({ post, priority = false }: { post: PostWithRel
 
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-center justify-between gap-3">
-          <Link
-            href={`/kategoria/${post.category.slug}`}
-            className="w-fit rounded-chip bg-teal-50 px-2.5 py-1 font-sans text-xs font-semibold text-teal-700"
-          >
-            {post.category.name}
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={`/kategoria/${post.category.slug}`}
+              className="w-fit rounded-chip bg-teal-50 px-2.5 py-1 font-sans text-xs font-semibold text-teal-700"
+            >
+              {post.category.name}
+            </Link>
+            {adult && <AgeBadge />}
+          </div>
           {post.rating != null && <RatingBadge rating={post.rating} size="sm" />}
         </div>
 

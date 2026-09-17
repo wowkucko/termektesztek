@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { cx } from '@/lib/utils';
+import AgeBadge from './AgeBadge';
 
 type SearchResult = {
   id: string;
@@ -12,6 +13,8 @@ type SearchResult = {
   coverImage: string | null;
   rating: number | null;
   categoryName: string;
+  /** 18+ (szexuális jellegű) cikk: a cikkoldalon korhatár-kapu vár. */
+  adult?: boolean;
 };
 
 export default function SearchForm({ inlineResults = false }: { inlineResults?: boolean }) {
@@ -181,7 +184,12 @@ export default function SearchForm({ inlineResults = false }: { inlineResults?: 
                       )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-sans text-sm font-medium text-ink">{r.title}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="min-w-0 truncate font-sans text-sm font-medium text-ink">
+                          {r.title}
+                        </span>
+                        {r.adult && <AgeBadge />}
+                      </span>
                       <span className="block truncate font-sans text-xs text-ink/65">
                         {r.categoryName}
                         {r.rating != null && <span className="font-semibold text-teal-700"> · {r.rating.toFixed(1)}/10</span>}

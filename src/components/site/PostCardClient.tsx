@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { formatDate } from '@/lib/utils';
 import { RatingBadge } from './VerdictStamp';
+import AgeBadge from './AgeBadge';
 
 // PostCard kliens-változata: sima JSON-adatból renderel (az infinite
 // scroll a /api/posts válaszait fűzi a listához). Kinézetre azonos az
@@ -18,6 +19,8 @@ export type ClientPost = {
   rating: number | null;
   publishedAt: string | null;
   category: { name: string; slug: string };
+  /** 18+ (szexuális jellegű) cikk: a kártyán jelzés + a cikkoldalon kapu. */
+  adult?: boolean;
 };
 
 export default function PostCardClient({ post }: { post: ClientPost }) {
@@ -41,12 +44,15 @@ export default function PostCardClient({ post }: { post: ClientPost }) {
 
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-center justify-between gap-3">
-          <Link
-            href={`/kategoria/${post.category.slug}`}
-            className="w-fit rounded-chip bg-teal-50 px-2.5 py-1 font-sans text-xs font-semibold text-teal-700"
-          >
-            {post.category.name}
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={`/kategoria/${post.category.slug}`}
+              className="w-fit rounded-chip bg-teal-50 px-2.5 py-1 font-sans text-xs font-semibold text-teal-700"
+            >
+              {post.category.name}
+            </Link>
+            {post.adult && <AgeBadge />}
+          </div>
           {post.rating != null && <RatingBadge rating={post.rating} size="sm" />}
         </div>
 

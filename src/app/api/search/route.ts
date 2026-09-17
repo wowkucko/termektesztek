@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAdultContent } from '@/lib/adultContent';
 
 // GET /api/search?q=... - élő keresési találatok a header keresőjéhez.
 // Publikus: csak publikált cikkeket ad, minimális adattal (gyors render).
@@ -44,7 +45,10 @@ export async function GET(request: NextRequest) {
       excerpt: true,
       coverImage: true,
       rating: true,
+      productName: true,
+      productBrand: true,
       category: { select: { name: true } },
+      tags: { select: { tag: { select: { name: true } } } },
     },
     orderBy: { publishedAt: 'desc' },
     take: 6,
@@ -58,6 +62,8 @@ export async function GET(request: NextRequest) {
       excerpt: p.excerpt.slice(0, 90),
       coverImage: p.coverImage,
       rating: p.rating,
+      // 18+ jelzés a keresőtalálatokban (a cikkoldalon korhatár-kapu vár)
+      adult: isAdultContent(p),
       categoryName: p.category.name,
     })),
   });

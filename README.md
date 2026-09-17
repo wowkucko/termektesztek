@@ -207,6 +207,33 @@ Jelentkezz be a `/admin/login` oldalon. Az admin felületen:
 Minden mentés után a publikus oldal érintett részei (főoldal, az adott cikk, kategória oldal,
 sitemap) azonnal frissülnek — nincs szükség újraindításra vagy külön cache-ürítésre.
 
+### 18+ korhatár-kapu (szexuális jellegű termékek tesztjei)
+
+A blogon előfordulhatnak felnőtt termékekről szóló tesztek (pl. szexuális segédeszközök).
+Ezek a cikkek a kiskorúak védelme érdekében **csak 18 éven felülieknek** érhetők el:
+
+- A cikkoldal helyett egy **korhatár-kapu** jelenik meg, amelyen a látogatónak nyilatkoznia
+  kell arról, hogy elmúlt 18 éves (és a nyilatkozatot el kell fogadnia).
+- A cikk **teljes tartalma szerveroldalon marad vissza**: elfogadás előtt a szöveg a HTML-be sem
+  kerül bele, így a kapu nem kerülhető meg kliens-oldali trükkel.
+- Az elfogadást egy `adult-consent` süti tárolja (30 napig), ezen kívül **nem gyűjtünk és nem
+  tárolunk semmilyen személyes adatot** (nincs regisztráció, életkor- vagy okmányadat).
+  A „Nem vagyok 18 éves” választás nem nyitja meg a cikket, csak a többi cikket ajánlja fel.
+- A listakártyákon és a keresőtalálatokon **18+ jelzés** figyelmeztet előre, a cikk metaadataiban
+  pedig `<meta name="rating" content="adult">` jelzi a tartalom jellegét.
+
+A 18+ cikkeket a rendszer **automatikusan** ismeri fel a cím, az összefoglaló, a terméknév/márka,
+valamint a címkék és a kategória alapján (erős kulcsszavak: pl. szexjáték, dildó, pornó;
+gyenge, súlyozott jelzések: pl. intim, kegel). Az éppen kapu alá eső cikkek listája ellenőrizhető:
+
+```bash
+npm run adult:check
+```
+
+Ha egy cikk tévesen került a kapu alá (vagy épp kimaradna), a `src/lib/adultContent.ts`
+`MANUAL_SAFE_SLUGS`, illetve `MANUAL_ADULT_SLUGS` listájában kézzel felülírható.
+A szabályrendszer és a süti állandói (`ADULT_CONSENT_*`) ugyanebben a fájlban vannak.
+
 ## 4. SEO, amit a projekt automatikusan kezel
 
 - Minden oldalhoz egyedi `<title>`, meta leírás, canonical URL, Open Graph és Twitter Card

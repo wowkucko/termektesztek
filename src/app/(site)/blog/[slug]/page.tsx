@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';import { getPostBySlug, getPublishedPostSlugs, getRelatedPosts, getRelevantPosts, getPostComments, getCommentStats } from '@/lib/data';
@@ -15,7 +16,9 @@ import PostCard from '@/components/site/PostCard';
 import MarkdownImage from '@/components/site/MarkdownImage';
 import CommentSection from '@/components/site/CommentSection';
 import AdSlot from '@/components/site/AdSlot';
+import AgeGate from '@/components/site/AgeGate';
 import { slots } from '@/lib/ads';
+import { ADULT_CONSENT_COOKIE, hasAdultConsent, isAdultContent } from '@/lib/adultContent';
 import { isValidElement, type ReactNode } from 'react';
 
 export const revalidate = 3600;
@@ -64,6 +67,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: absoluteUrl(`/blog/${post.slug}`) },
+    // 18+ cikkek jelölése a metaadatokban is (keresők, szűrők, szülői eszközök)
+    ...(isAdultContent(post) ? { other: { rating: 'adult' } } : {}),
     openGraph: {
       type: 'article',
       title,
@@ -90,6 +95,40 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PostPage({ params }: Props) {
   const post = await getPostBySlug(params.slug);
   if (!post || post.status !== 'PUBLISHED') notFound();
+
+  // 18+ (szexuális jellegű) cikkek: a tartalom addig NEM renderelődik, amíg a
+  // látogató nem erősítette meg a korhatárt. A kaput szerveroldalon döntjük el,
+  // így a szöveg a hozzájárulás előtt a HTML-be sem kerül bele.
+  // A cookies() hívás csak ezeknél a cikkeknél fut le, ezért a többi cikk
+  // továbbra is statikus HTML-ként szolgálódik ki.
+  if (isAdultContent(post)) {
+    const verified = hasAdultConsent((await cookies()).get(ADULT_CONSENT_COOKIE)?.value);
+    if (!verified) {
+      const adultCrumbs = [
+        { name: 'Kezdőlap', href: '/' },
+        { name: post.category.name, href: `/kategoria/${post.category.slug}` },
+        { name: '18+ felnőtt tartalom' },
+      ];
+      return (
+        <div className="pb-20">
+          <div className="container-page pt-8">
+            <Breadcrumbs items={adultCrumbs} />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify(
+                  breadcrumbJsonLd(
+                    adultCrumbs.map((c) => ({ name: c.name, path: c.href || `/blog/${post.slug}` }))
+                  )
+                ),
+              }}
+            />
+          </div>
+          <AgeGate />
+        </div>
+      );
+    }
+  }
 
   const related = await getRelatedPosts(post);
   const relevant = await getRelevantPosts(post, 5);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPublishedPosts } from '@/lib/data';
+import { isAdultContent } from '@/lib/adultContent';
 
 const MAX_PAGE_SIZE = 24;
 
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
       rating: p.rating,
       publishedAt: p.publishedAt,
       category: { name: p.category.name, slug: p.category.slug },
+      adult: isAdultContent(p),
     })),
     total,
     page,

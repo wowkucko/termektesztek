@@ -70,9 +70,10 @@ export function cx(...classes: Array<string | false | null | undefined>): string
 // Szerveroldali Post -> kliensre küldhető JSON (dátumok ISO-stringgé alakítva).
 // Az InfinitePostList kezdeti elemeihez.
 import type { ClientPost } from '@/components/site/PostCardClient';
+import { isAdultContent, type AdultContentInput } from '@/lib/adultContent';
 
 export function toClientPosts(
-  posts: {
+  posts: (AdultContentInput & {
     id: string;
     slug: string;
     title: string;
@@ -82,7 +83,7 @@ export function toClientPosts(
     rating: number | null;
     publishedAt: Date | null;
     category: { name: string; slug: string };
-  }[]
+  })[]
 ): ClientPost[] {
   return posts.map((p) => ({
     id: p.id,
@@ -94,6 +95,8 @@ export function toClientPosts(
     rating: p.rating,
     publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
     category: { name: p.category.name, slug: p.category.slug },
+    // A 18+ jelzés a kártyán is látszik (a cikkoldalon korhatár-kapu vár)
+    adult: isAdultContent(p),
   }));
 }
 
