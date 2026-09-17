@@ -15,7 +15,7 @@
     "classes:check": "tsx scripts/check-product-classes.ts",
     "db:studio": "prisma studio",
     "push": "node scripts/push-posts.mjs",
-    "lighthouse:ci": "npm run build && node scripts/resolve-audit-urls.mjs && lhci autorun"
+    "lighthouse:ci": "npm run build && tsx scripts/resolve-audit-urls.ts && lhci autorun"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
