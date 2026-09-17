@@ -1,16 +1,32 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
-import { SITE_URL } from '@/lib/seo';
+import { MIN_POSTS_FOR_LISTING_INDEX, SITE_URL } from '@/lib/seo';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+  const publishedWhere = { status: 'PUBLISHED', publishedAt: { lte: now } };
+
   const [posts, categories, tags] = await Promise.all([
     prisma.post.findMany({
-      where: { status: 'PUBLISHED', publishedAt: { lte: new Date() } },
+      where: publishedWhere,
       select: { slug: true, updatedAt: true },
     }),
     prisma.category.findMany({ select: { slug: true } }),
-    prisma.tag.findMany({ select: { slug: true } }),
+    // A címkeoldalak nagy része 1-2 cikkes, vékony listaoldal: ezeket nem
+    // érdemes a sitemapben kínálni, mert elviszik a crawl budgetet a cikkek
+    // elől (ráadásul duplikálják a cikklistát). A küszöb alattiak noindexet
+    // kapnak, de a linkjeik követhetők maradnak.
+    prisma.tag.findMany({
+      select: {
+        slug: true,
+        _count: {
+          select: { posts: { where: { post: publishedWhere } } },
+        },
+      },
+    }),
   ]);
+
+  const indexableTags = tags.filter((t) => t._count.posts >= MIN_POSTS_FOR_LISTING_INDEX);
 
   // A /kereses noindex - nem kerül a sitemapbe sem.
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -33,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  const tagRoutes: MetadataRoute.Sitemap = tags.map((t) => ({
+  const tagRoutes: MetadataRoute.Sitemap = indexableTags.map((t) => ({
     url: `${SITE_URL}/cimke/${t.slug}`,
     changeFrequency: 'weekly',
     priority: 0.4,
@@ -46,16 +62,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  // Márka-hubok
+  // Márka-hubok: ide is csak a legalább MIN_POSTS_FOR_LISTING_INDEX cikkes
+  // márkák kerülnek (a 285 márkából ~170-nek egyetlen cikke van).
   const brandSlugs = new Set<string>();
   const brandRoutes: MetadataRoute.Sitemap = [];
   try {
     const { getAllBrands } = await import('@/lib/data');
     for (const b of await getAllBrands()) {
-      if (!brandSlugs.has(b.slug)) {
-        brandSlugs.add(b.slug);
-        brandRoutes.push({ url: `${SITE_URL}/marka/${b.slug}`, changeFrequency: 'weekly', priority: 0.6 });
-      }
+      if (b.count < MIN_POSTS_FOR_LISTING_INDEX) continue;
+      if (brandSlugs.has(b.slug)) continue;
+      brandSlugs.add(b.slug);
+      brandRoutes.push({ url: `${SITE_URL}/marka/${b.slug}`, changeFrequency: 'weekly', priority: 0.6 });
     }
   } catch {
     // DB-hiba esetén a sitemap a többi útvonallal így is legenerálódik

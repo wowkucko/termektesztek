@@ -404,6 +404,15 @@ export const getTagBySlug = cache(async (slug: string) => {
   return prisma.tag.findUnique({ where: { slug } });
 });
 
+// Címke-oldal vékony-tartalom döntéséhez: hány PUBLIKÁLT cikk tartozik a címkéhez.
+// A küszöb alatti címkeoldalak noindexet kapnak (a linkjeik követése mellett),
+// és kimaradnak a sitemapből - így nem viszik el a crawl budgetet a cikkek elől.
+export const getPublishedPostCountByTag = cache(async (tagSlug: string): Promise<number> => {
+  return prisma.post.count({
+    where: { ...publishedWhere, tags: { some: { tag: { slug: tagSlug } } } },
+  });
+});
+
 export async function incrementPostViews(id: string) {
   try {
     await prisma.post.update({ where: { id }, data: { views: { increment: 1 } } });

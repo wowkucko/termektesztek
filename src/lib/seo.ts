@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import type { PostWithRelations } from '@/lib/data';
 import { readingTimeMinutes } from '@/lib/utils';
 
@@ -5,6 +6,26 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:30
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Terméktesztek és vélemények';
 export const SITE_DESCRIPTION =
   process.env.NEXT_PUBLIC_SITE_DESCRIPTION || 'Alapos, független terméktesztek és vásárlási tanácsok.';
+
+/**
+ * Ennyi publikált cikk alatt egy listaoldal (címke, márka, kategória) a Google
+ * szemében vékony/duplikált tartalom: ilyenkor nem indexeljük, de a benne lévő
+ * linkeket követjük - így a crawler továbbra is eljut az ott szereplő cikkekhez.
+ * Ugyanez a küszöb szűri a sitemapet is (lásd src/app/sitemap.ts).
+ */
+export const MIN_POSTS_FOR_LISTING_INDEX = 3;
+
+/**
+ * robots meta egy listaoldalhoz: a 2. és további lapozott oldalak mindig
+ * noindexek (duplikált tartalom), és a küszöb alatti cikkszámú listák is.
+ * Az `undefined` azt jelenti, hogy az oldal alapból indexelhető.
+ */
+export function listingRobots(postCount: number, page = 1): Metadata['robots'] {
+  if (postCount < MIN_POSTS_FOR_LISTING_INDEX || page > 1) {
+    return { index: false, follow: true };
+  }
+  return undefined;
+}
 
 export function absoluteUrl(path: string): string {
   return new URL(path, SITE_URL).toString();

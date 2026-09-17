@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getTagBySlug, getPublishedPosts } from '@/lib/data';
-import { absoluteUrl } from '@/lib/seo';
+import { getTagBySlug, getPublishedPostCountByTag, getPublishedPosts } from '@/lib/data';
+import { absoluteUrl, listingRobots } from '@/lib/seo';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import Pagination from '@/components/site/Pagination';
 import InfinitePostList from '@/components/site/InfinitePostList';
@@ -18,11 +18,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!tag) return {};
   const page = Math.max(1, Number(searchParams.page) || 1);
   const title = `#${tag.name} címkéjű tesztek`;
+  // Vékony címkeoldal (kevés cikk): noindex, follow - a 2+ lapokkal együtt.
+  const postCount = await getPublishedPostCountByTag(tag.slug);
   return {
     title,
     description: `Az összes bejegyzés, amit a(z) ${tag.name} címkével láttunk el.`,
-    // A 2+ oldalak duplikált tartalom - ne indexeljük őket, de a linkeket kövessük
-    robots: page > 1 ? { index: false, follow: true } : undefined,
+    robots: listingRobots(postCount, page),
     alternates: { canonical: absoluteUrl(`/cimke/${tag.slug}`) },
   };
 }

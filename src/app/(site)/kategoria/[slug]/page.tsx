@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategoryBySlug, getPublishedPosts } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd } from '@/lib/seo';
+import { absoluteUrl, breadcrumbJsonLd, listingRobots } from '@/lib/seo';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import Pagination from '@/components/site/Pagination';
 import InfinitePostList from '@/components/site/InfinitePostList';
@@ -20,11 +20,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const page = Math.max(1, Number(searchParams.page) || 1);
   const title = `${category.name} tesztek`;
   const description = category.description || `Az összes ${category.name.toLowerCase()} kategóriába tartozó termékteszt egy helyen.`;
+  // Kevés cikkes kategória vagy 2+ lap: duplikált/vékony lista - noindex, follow
+  const { total } = await getPublishedPosts({ categorySlug: category.slug, take: 1 });
   return {
     title,
     description,
-    // A 2+ oldalak duplikált tartalom - ne indexeljük őket, de a linkeket kövessük
-    robots: page > 1 ? { index: false, follow: true } : undefined,
+    robots: listingRobots(total, page),
     alternates: { canonical: absoluteUrl(`/kategoria/${category.slug}`) },
     openGraph: { title, description, url: absoluteUrl(`/kategoria/${category.slug}`) },
   };

@@ -242,6 +242,12 @@ A szabályrendszer és a süti állandói (`ADULT_CONSENT_*`) ugyanebben a fájl
   (az előnyök/hátrányok listából automatikusan), `BreadcrumbList`, `WebSite`, `Organization`
 - Article altípusok (`BlogPosting`/`Article`) `wordCount` és `timeRequired` mezőkkel
 - Dinamikus `sitemap.xml` és `robots.txt`
+- **Crawl budget kímélése**: a vékony listaoldalak (címke-, márka- és kategóriaoldal
+  `MIN_POSTS_FOR_LISTING_INDEX = 3` publikált cikk alatt, valamint minden 2. és további lapozott
+  oldal) `noindex, follow`-t kapnak — nem indexeljük őket, de a bennük lévő linkeket követjük,
+  így a crawler továbbra is eljut a cikkekhez. Ugyanez a küszöb szűri a sitemapet: a
+  egy-két cikkes címke- és márkaoldalak (a törzskészlet nagy része) kimaradnak belőle.
+  A szabály egy helyen van: `MIN_POSTS_FOR_LISTING_INDEX` + `listingRobots()` a `src/lib/seo.ts`-ben.
 - RSS feed a `/rss.xml` alatt
 - Képoptimalizálás a `next/image`-dzsel (a `sharp` csomag telepítve van hozzá)
 - Szemantikus HTML, olvasható URL-ek (ékezetes címekből is helyes, ékezet nélküli slug készül)

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { getAllBrands, getBrandBySlug, getBrandPosts } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd } from '@/lib/seo';
+import { absoluteUrl, breadcrumbJsonLd, listingRobots } from '@/lib/seo';
 import { formatPriceFt } from '@/lib/utils';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import { RatingBadge } from '@/components/site/VerdictStamp';
@@ -25,6 +25,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    // Egycikkes márkaoldal: vékony listaoldal, noindex - a linkjeit viszont követjük
+    robots: listingRobots(brand.count),
     alternates: { canonical: absoluteUrl(`/marka/${brand.slug}`) },
     openGraph: { title, description, url: absoluteUrl(`/marka/${brand.slug}`) },
   };
