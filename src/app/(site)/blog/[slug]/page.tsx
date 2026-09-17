@@ -17,8 +17,10 @@ import MarkdownImage from '@/components/site/MarkdownImage';
 import CommentSection from '@/components/site/CommentSection';
 import AdSlot from '@/components/site/AdSlot';
 import AgeGate from '@/components/site/AgeGate';
+import ProductClassLinks from '@/components/site/ProductClassLinks';
 import { slots } from '@/lib/ads';
 import { ADULT_CONSENT_COOKIE, hasAdultConsent, isAdultContent } from '@/lib/adultContent';
+import { productClassesForPost } from '@/lib/productClasses';
 import { isValidElement, type ReactNode } from 'react';
 
 export const revalidate = 3600;
@@ -162,6 +164,14 @@ export default async function PostPage({ params }: Props) {
   const showUpdated =
     !!post.publishedAt && post.updatedAt.getTime() - post.publishedAt.getTime() > 24 * 3600 * 1000;
 
+  // Termékosztály-toplisták ehhez a cikkhez (pl. "legjobb air fryer"): a
+  // "legjobb X" hubok a legkeresettebb oldalak, ezért minden cikkből linkeljük
+  // őket - a látogató is itt látja, mihez hasonlítható a tesztelt termék.
+  const classLinks = productClassesForPost(post, 3).map((c) => ({
+    href: `/legjobb/${c.slug}`,
+    label: `Legjobb ${c.name} – toplista`,
+  }));
+
   // Aktuális ár a termékdobozokba (a szinkron menti; tájékoztató jellegű)
   const priceLabel = formatPriceFt(post.priceFt);
   const brandSlug = post.productBrand ? slugify(post.productBrand) : null;
@@ -263,6 +273,13 @@ export default async function PostPage({ params }: Props) {
               )}
             </div>
           )}
+
+          <ProductClassLinks
+            className="mb-8"
+            heading="A kategória legjobbjai"
+            intro="Hasonlítsd össze a kategória legjobbra értékelt modelljeit ársáv szerint is:"
+            links={classLinks}
+          />
 
           <AdSlot slot={slots().article} label="Cikk eleji hirdetés" />
 

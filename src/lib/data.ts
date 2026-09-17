@@ -404,6 +404,54 @@ export const getTagBySlug = cache(async (slug: string) => {
   return prisma.tag.findUnique({ where: { slug } });
 });
 
+/**
+ * Termékosztály-toplistákhoz (pl. "legjobb air fryer") rangsorolható cikklista.
+ *
+ * Szándékosan tartalom NÉLKÜL kérjük le: a kulcsszó-illesztés és az ársáv-szűrés
+ * a memóriában történik, így a 670 cikk egyetlen könnyű lekérdezésből kiszolgálható
+ * (a content mező nélkül a válasz töredéke a teljes listának). React cache():
+ * egy kérésen belül (metadata + oldal, tobb osztály egyszerre) egyszer fut.
+ */
+export type RankablePost = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverImage: string | null;
+  coverImageAlt: string | null;
+  rating: number | null;
+  priceFt: number | null;
+  productName: string | null;
+  productBrand: string | null;
+  affiliateUrl: string | null;
+  publishedAt: Date | null;
+  category: { name: string; slug: string };
+  tags: { tag: { name: string } }[];
+};
+
+export const getRankablePosts = cache(async (): Promise<RankablePost[]> => {
+  return prisma.post.findMany({
+    where: publishedWhere,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      excerpt: true,
+      coverImage: true,
+      coverImageAlt: true,
+      rating: true,
+      priceFt: true,
+      productName: true,
+      productBrand: true,
+      affiliateUrl: true,
+      publishedAt: true,
+      category: { select: { name: true, slug: true } },
+      tags: { select: { tag: { select: { name: true } } } },
+    },
+    orderBy: { publishedAt: 'desc' },
+  });
+});
+
 // Címke-oldal vékony-tartalom döntéséhez: hány PUBLIKÁLT cikk tartozik a címkéhez.
 // A küszöb alatti címkeoldalak noindexet kapnak (a linkjeik követése mellett),
 // és kimaradnak a sitemapből - így nem viszik el a crawl budgetet a cikkek elől.

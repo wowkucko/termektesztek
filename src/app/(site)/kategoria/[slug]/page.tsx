@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCategoryBySlug, getPublishedPosts } from '@/lib/data';
+import { getCategoryBySlug, getPublishedPosts, getRankablePosts } from '@/lib/data';
 import { absoluteUrl, breadcrumbJsonLd, listingRobots } from '@/lib/seo';
+import {
+  MIN_POSTS_FOR_PRODUCT_CLASS,
+  countProductClassPosts,
+  productClassesForCategory,
+} from '@/lib/productClasses';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import Pagination from '@/components/site/Pagination';
 import InfinitePostList from '@/components/site/InfinitePostList';
+import ProductClassLinks from '@/components/site/ProductClassLinks';
 import { toClientPosts } from '@/lib/utils';
 
 export const revalidate = 3600;
@@ -47,6 +53,17 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     { name: category.name },
   ];
 
+  // A kategória termékosztály-toplistái ("legjobb air fryer", "legjobb porszívó"):
+  // a kereslet termékosztály-szinten van, ezért innen is linkeljük őket. A vékony
+  // osztályokat (< MIN cikk) nem linkeljük, mert azok noindexet kapnak.
+  const classCandidates = productClassesForCategory(category.slug);
+  const rankable = classCandidates.length > 0 ? await getRankablePosts() : [];
+  const classLinks = classCandidates
+    .map((cls) => ({ cls, count: countProductClassPosts(rankable, cls) }))
+    .filter(({ count }) => count >= MIN_POSTS_FOR_PRODUCT_CLASS)
+    .sort((a, b) => b.count - a.count)
+    .map(({ cls, count }) => ({ href: `/legjobb/${cls.slug}`, label: `Legjobb ${cls.name} (${count} teszt)` }));
+
   return (
     <div className="container-page py-10">
       <script
@@ -87,6 +104,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </span>
         <span aria-hidden="true" className="font-display text-2xl text-signal-600">→</span>
       </Link>
+
+      <ProductClassLinks
+        className="mt-8"
+        heading="Toplisták termékosztályonként"
+        intro={`Nem tudod, melyik típus illik hozzád? Ezekben a rangsorokban a legjobbra értékelt modelleket találod ársáv szerint is, csak a ${category.name.toLowerCase()} kategóriából.`}
+        links={classLinks}
+      />
 
       <div className="mt-10">
         {posts.length === 0 ? (

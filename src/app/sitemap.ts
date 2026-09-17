@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
+import { getRankablePosts } from '@/lib/data';
 import { MIN_POSTS_FOR_LISTING_INDEX, SITE_URL } from '@/lib/seo';
+import { MIN_POSTS_FOR_PRODUCT_CLASS, productClassCounts } from '@/lib/productClasses';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -62,6 +64,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // Termékosztály-toplisták ("legjobb air fryer", "legjobb robotporszívó"):
+  // a legkeresettebb oldalak, ezért magas prioritással, de csak ha van mögöttük
+  // legalább MIN_POSTS_FOR_PRODUCT_CLASS értékelt teszt (különben noindex).
+  const classRoutes: MetadataRoute.Sitemap = productClassCounts(await getRankablePosts())
+    .filter(({ count }) => count >= MIN_POSTS_FOR_PRODUCT_CLASS)
+    .map(({ cls }) => ({
+      url: `${SITE_URL}/legjobb/${cls.slug}`,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    }));
+
   // Márka-hubok: ide is csak a legalább MIN_POSTS_FOR_LISTING_INDEX cikkes
   // márkák kerülnek (a 285 márkából ~170-nek egyetlen cikke van).
   const brandSlugs = new Set<string>();
@@ -78,5 +91,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB-hiba esetén a sitemap a többi útvonallal így is legenerálódik
   }
 
-  return [...staticRoutes, ...postRoutes, ...categoryRoutes, ...toplistRoutes, ...brandRoutes, ...tagRoutes];
+  return [
+    ...staticRoutes,
+    ...postRoutes,
+    ...categoryRoutes,
+    ...toplistRoutes,
+    ...classRoutes,
+    ...brandRoutes,
+    ...tagRoutes,
+  ];
 }

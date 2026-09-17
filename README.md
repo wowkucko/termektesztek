@@ -234,6 +234,35 @@ Ha egy cikk tévesen került a kapu alá (vagy épp kimaradna), a `src/lib/adult
 `MANUAL_SAFE_SLUGS`, illetve `MANUAL_ADULT_SLUGS` listájában kézzel felülírható.
 A szabályrendszer és a süti állandói (`ADULT_CONSENT_*`) ugyanebben a fájlban vannak.
 
+### Termékosztály-toplisták ("legjobb air fryer", "legjobb porszívó")
+
+A kategórianevek ("Otthon és konyha") nem keresési szándékok — senki nem írja be őket a Google-be.
+A valódi kereslet termékosztály-szinten van ("legjobb air fryer 40 ezer alatt"), ezért a
+`/legjobb/{slug}` útvonal kétfajta rangsort szolgál ki:
+
+- **termékosztály** (pl. `/legjobb/air-fryer`) — a `src/lib/productClasses.ts` regiszterből,
+  kulcsszó-alapú besorolással, kategóriától függetlenül, saját ársávokkal és bevezető szöveggel;
+- **kategória** (pl. `/legjobb/otthon-es-konyha`) — a szélesebb gyűjtőoldal, változatlanul.
+
+A besorolás a **cím + terméknév/márka + címkék** alapján történik, ékezet nélküli szövegen, szó
+eleji egyezéssel (a "porsziv" kulcsszó így a "porszívóval" alakot is elkapja, a "eger" viszont
+nem illeszkedik a "keverő" szóra). Az összefoglalót szándékosan nem használjuk: az gyakran
+hasonlítja a terméket egy másik osztályhoz ("nem hajformázó, hanem szárító"), és ilyenkor a
+termék átkerülne a másik listába. A kiegészítők, tartozékok, pótaskatrészek és szakácskönyvek
+kimaradnak a rangsorokból (`isAccessoryPost`), mert egy "legjobb X" listában nem termékek.
+
+Új osztály felvétele: egy bejegyzés a `PRODUCT_CLASSES` tömbben (slug, név, kategória, kulcsszavak,
+opcionális kizárások, ársávok, bevezető). Ellenőrzés:
+
+```bash
+npm run classes:check   # osztályonkénti cikkszám + példacímek
+```
+
+A 3 cikk alatti osztályok ugyanúgy `noindex, follow`-t kapnak és kimaradnak a sitemapből, mint a
+vékony címkeoldalak (`MIN_POSTS_FOR_PRODUCT_CLASS`). A toplista-oldalak és a cikkek kölcsönösen
+linkelik egymást: a kategóriaoldal a saját osztályait, a cikkoldal pedig a hozzá tartozó
+osztály-toplistákat sorolja fel ("A kategória legjobbjai").
+
 ## 4. SEO, amit a projekt automatikusan kezel
 
 - Minden oldalhoz egyedi `<title>`, meta leírás, canonical URL, Open Graph és Twitter Card

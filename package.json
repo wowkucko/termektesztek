@@ -12,6 +12,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "adult:check": "tsx scripts/check-adult-content.ts",
+    "classes:check": "tsx scripts/check-product-classes.ts",
     "db:studio": "prisma studio",
     "push": "node scripts/push-posts.mjs",
     "lighthouse:ci": "npm run build && node scripts/resolve-audit-urls.mjs && lhci autorun"

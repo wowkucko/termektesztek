@@ -2,69 +2,202 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { getAllCategories, getCategoryBySlug, getTopRatedPosts } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd } from '@/lib/seo';
+import { cache } from 'react';
+import {
+  getAllCategories,
+  getCategoryBySlug,
+  getRankablePosts,
+  getTopRatedPosts,
+  type RankablePost,
+} from '@/lib/data';
+import { absoluteUrl, breadcrumbJsonLd, listingRobots } from '@/lib/seo';
 import { formatPriceFt } from '@/lib/utils';
+import {
+  PRODUCT_CLASSES,
+  MIN_POSTS_FOR_PRODUCT_CLASS,
+  countProductClassPosts,
+  getProductClass,
+  priceBandsFor,
+  productClassesForCategory,
+  rankProductClassPosts,
+  type PriceBand,
+  type ProductClass,
+} from '@/lib/productClasses';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
+import ProductClassLinks from '@/components/site/ProductClassLinks';
 import { RatingBadge } from '@/components/site/VerdictStamp';
 
 export const revalidate = 3600;
 
-export async function generateStaticParams() {
-  const categories = await getAllCategories();
-  return categories.map((c) => ({ slug: c.slug }));
-}
-
 type Props = { params: { slug: string }; searchParams: { maxAr?: string } };
 
-const PRICE_BANDS = [
-  { label: 'Mind', value: null as number | null },
-  { label: '50 ezer Ft alatt', value: 50000 },
-  { label: '100 ezer Ft alatt', value: 100000 },
-  { label: '200 ezer Ft alatt', value: 200000 },
-];
+const TOP_N = 10;
+
+/**
+ * A /legjobb/{slug} kétfajta rangsort szolgál ki ugyanazzal a megjelenéssel:
+ *  - termékosztály (pl. /legjobb/air-fryer) - ez a keresett szándék, kulcsszó-alapú
+ *    besorolással, kategóriától függetlenül (lásd src/lib/productClasses.ts);
+ *  - kategória (pl. /legjobb/otthon-es-konyha) - a szélesebb gyűjtőoldal.
+ * A termékosztály slugja elsőbbséget élvez, ütközés nincs (ellenőrizve a teszttel).
+ */
+export async function generateStaticParams() {
+  const categories = await getAllCategories();
+  return [
+    ...PRODUCT_CLASSES.map((c) => ({ slug: c.slug })),
+    ...categories.map((c) => ({ slug: c.slug })),
+  ];
+}
+
+type ToplistSource = {
+  kind: 'class' | 'category';
+  /** Kereshető alak (kisbetűs): "air fryer", "otthon és konyha". */
+  name: string;
+  h1: string;
+  intro: string;
+  eyebrow: string;
+  categoryName: string | null;
+  categorySlug: string | null;
+  crumbs: { name: string; href?: string }[];
+  posts: RankablePost[];
+  bands: PriceBand[];
+  /** Az árszűrés előtti összes cikk (a vékony-tartalom döntéshez és a szöveghez). */
+  totalCount: number;
+  canonicalPath: string;
+  metaTitle: string;
+  metaDescription: string;
+};
+
+// React cache(): a generateMetadata és az oldal ugyanebben a kérésben fut, így
+// a drága (670 cikkes) besorolás egyszer történik meg.
+const resolveSource = cache(async (slug: string, maxAr: number | null): Promise<ToplistSource | null> => {
+  const year = new Date().getFullYear();
+
+  const cls = getProductClass(slug);
+  if (cls) {
+    const all = await getRankablePosts();
+    const rankedAll = rankProductClassPosts(all, cls, null, Number.MAX_SAFE_INTEGER);
+    const posts = maxAr == null ? rankedAll.slice(0, TOP_N) : rankProductClassPosts(all, cls, maxAr, TOP_N);
+    const category = await getCategoryBySlug(cls.categorySlug);
+    const categoryName = category?.name ?? null;
+    const crumbs = [
+      { name: 'Kezdőlap', href: '/' },
+      ...(categoryName ? [{ name: categoryName, href: `/kategoria/${cls.categorySlug}` }] : []),
+      { name: `Legjobb ${cls.name} ${year}` },
+    ];
+    return {
+      kind: 'class',
+      name: cls.name,
+      h1: `Legjobb ${cls.name} ${year}: rangsor és összehasonlítás`,
+      intro: cls.blurb,
+      eyebrow: `🏆 ${categoryName ?? 'Toplista'} · ${year}`,
+      categoryName,
+      categorySlug: categoryName ? cls.categorySlug : null,
+      crumbs,
+      posts,
+      bands: priceBandsFor(cls),
+      totalCount: rankedAll.length,
+      canonicalPath: `/legjobb/${cls.slug}`,
+      metaTitle: `Legjobb ${cls.name} ${year} – toplista és összehasonlítás`,
+      metaDescription: `${cls.blurb} Rangsor ${rankedAll.length} magyar nyelvű teszt pontszámai alapján, ársáv szerint is szűrhető, összehasonlító táblázattal.`,
+    };
+  }
+
+  const category = await getCategoryBySlug(slug);
+  if (!category) return null;
+
+  const catName = category.name.toLowerCase();
+  const posts = await getTopRatedPosts(category.slug, TOP_N, maxAr);
+  // A kategória publikált cikkszáma a vékony-tartalom döntéshez (a toplista
+  // csak 10 elemet mutat, de az oldal a teljes kategóriát képviseli).
+  const allCategories = await getAllCategories();
+  const totalCount = allCategories.find((c) => c.slug === category.slug)?._count.posts ?? posts.length;
+
+  return {
+    kind: 'category',
+    name: catName,
+    h1: `Legjobb ${catName} ${year}: rangsor és összehasonlítás`,
+    intro:
+      category.description ||
+      `Összegyűjtöttük a legjobbra értékelt ${catName} termékeket az oldalon megjelent magyar nyelvű tesztek alapján. A sorrendet a tesztjeinkben adott pontszámok határozzák meg, így egy pillantással láthatod, melyikkel járhatsz a legjobban.`,
+    eyebrow: `🏆 Toplista · ${year}`,
+    categoryName: category.name,
+    categorySlug: category.slug,
+    crumbs: [
+      { name: 'Kezdőlap', href: '/' },
+      { name: category.name, href: `/kategoria/${category.slug}` },
+      { name: `Legjobb ${catName} ${year}` },
+    ],
+    posts,
+    bands: [
+      { label: 'Mind', value: null },
+      { label: '50 ezer Ft alatt', value: 50000 },
+      { label: '100 ezer Ft alatt', value: 100000 },
+      { label: '200 ezer Ft alatt', value: 200000 },
+    ],
+    totalCount,
+    canonicalPath: `/legjobb/${category.slug}`,
+    metaTitle: `Legjobb ${catName} ${year} – toplista és összehasonlítás`,
+    metaDescription: `A legjobbra értékelt ${catName} termékek rangsorolva, magyar nyelvű tesztek alapján. Összehasonlító táblázat pontszámokkal, előnyökkel és vásárlási linkekkel.`,
+  };
+});
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const category = await getCategoryBySlug(params.slug);
-  if (!category) return {};
-  const year = new Date().getFullYear();
   const maxAr = Number(searchParams.maxAr) || null;
-  const band = PRICE_BANDS.find((b) => b.value === maxAr);
-  const title = `Legjobb ${category.name.toLowerCase()} ${year}${band?.value ? ` – ${band.label.toLowerCase()}` : ''} – toplista és összehasonlítás`;
-  const description = `A legjobbra értékelt ${category.name.toLowerCase()} termékek rangsorolva${band?.value ? `, ${band.label.toLowerCase()}` : ''}, magyar nyelvű tesztek alapján. Összehasonlító táblázat pontszámokkal, előnyökkel és vásárlási linkekkel.`;
+  const source = await resolveSource(params.slug, maxAr);
+  if (!source) return {};
+
+  const band = source.bands.find((b) => b.value === maxAr);
+  const title = band?.value ? `${source.metaTitle.split(' – ')[0]} – ${band.label.toLowerCase()} – toplista` : source.metaTitle;
+  const description = band?.value ? source.metaDescription.replace('Rangsor', `${band.label} szűrve. Rangsor`) : source.metaDescription;
+
   return {
     title,
     description,
-    // A szűrt nézet duplikált tartalom - a canonical mindig az alap URL-re mutat
-    alternates: { canonical: absoluteUrl(`/legjobb/${category.slug}`) },
-    openGraph: { title, description, url: absoluteUrl(`/legjobb/${category.slug}`) },
+    // Az ársávos nézet ugyanannak a tartalomnak a szűrt változata: a canonical
+    // mindig az alap URL-re mutat. A vékony (<3 cikkes) osztályok noindexet kapnak.
+    robots: listingRobots(source.totalCount),
+    alternates: { canonical: absoluteUrl(source.canonicalPath) },
+    openGraph: { title, description, url: absoluteUrl(source.canonicalPath) },
   };
 }
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default async function ToplistPage({ params, searchParams }: Props) {
-  const category = await getCategoryBySlug(params.slug);
-  if (!category) notFound();
-
-  const year = new Date().getFullYear();
   const maxAr = Number(searchParams.maxAr) || null;
-  const activeBand = PRICE_BANDS.find((b) => b.value === maxAr) ?? PRICE_BANDS[0];
-  const top = await getTopRatedPosts(category.slug, 10, maxAr);
-  const catName = category.name.toLowerCase();
+  const source = await resolveSource(params.slug, maxAr);
+  if (!source) notFound();
+
+  const { posts: top, bands, name } = source;
+  const year = new Date().getFullYear();
+  const activeBand = bands.find((b) => (b.value ?? null) === maxAr) ?? bands[0];
   const hasPrices = top.some((p) => p.priceFt != null);
 
-  const crumbs = [
-    { name: 'Kezdőlap', href: '/' },
-    { name: category.name, href: `/kategoria/${category.slug}` },
-    { name: `Legjobb ${catName} ${year}` },
-  ];
+  // Testvérosztályok ugyanabban a kategóriában (belső linkelés mindkét irányban).
+  const siblingLinks: { href: string; label: string }[] = [];
+  if (source.categorySlug) {
+    const all = await getRankablePosts();
+    const siblings = productClassesForCategory(source.categorySlug).filter(
+      (c: ProductClass) => c.slug !== params.slug
+    );
+    for (const c of siblings) {
+      const count = countProductClassPosts(all, c);
+      if (count < MIN_POSTS_FOR_PRODUCT_CLASS) continue;
+      siblingLinks.push({ href: `/legjobb/${c.slug}`, label: `Legjobb ${c.name} (${count})` });
+    }
+    if (source.kind === 'class') {
+      siblingLinks.push({
+        href: `/legjobb/${source.categorySlug}`,
+        label: `Legjobb ${source.categoryName?.toLowerCase()} – teljes toplista`,
+      });
+    }
+  }
 
   const itemListJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `Legjobb ${catName} ${year}`,
-    description: `A legjobbra értékelt ${catName} termékek rangsora.`,
+    name: source.h1,
+    description: source.metaDescription,
     numberOfItems: top.length,
     itemListElement: top.map((p, i) => ({
       '@type': 'ListItem',
@@ -80,32 +213,45 @@ export default async function ToplistPage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
-            breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, path: c.href || `/legjobb/${category.slug}` })))
+            breadcrumbJsonLd(source.crumbs.map((c) => ({ name: c.name, path: c.href || source.canonicalPath })))
           ),
         }}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
 
-      <Breadcrumbs items={crumbs} />
+      <Breadcrumbs items={source.crumbs} />
 
       <p className="mt-4 font-sans text-sm font-semibold uppercase tracking-wide text-signal-700">
-        🏆 Toplista · {year}
+        {source.eyebrow}
       </p>
       <h1 className="mt-2 max-w-3xl font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
-        Legjobb {catName} {year}: rangsor és összehasonlítás
+        {source.h1}
       </h1>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-sans text-sm text-ink/65">
+        <span>
+          <strong className="font-semibold text-ink">{source.totalCount}</strong> teszt pontszámai alapján
+        </span>
+        {source.categorySlug && source.categoryName && (
+          <>
+            <span aria-hidden="true">·</span>
+            <Link href={`/kategoria/${source.categorySlug}`} className="font-medium text-teal-600 hover:underline">
+              Összes {source.categoryName.toLowerCase()} teszt
+            </Link>
+          </>
+        )}
+      </div>
+
       <p className="mt-4 max-w-3xl font-body text-base leading-relaxed text-ink/70">
-        {category.description ||
-          `Összegyűjtöttük a legjobbra értékelt ${catName} termékeket az oldalon megjelent magyar nyelvű tesztek alapján. A sorrendet a tesztjeinkben adott pontszámok határozzák meg, így egy pillantással láthatod, melyik termékkel járhatsz a legjobban.`}{' '}
-        Mindegyikhez részletes tesztet is találsz előnyökkel, hátrányokkal és vásárlói
+        {source.intro} Mindegyikhez részletes tesztet is találsz előnyökkel, hátrányokkal és vásárlói
         vélemények összesítésével.
       </p>
 
-      {hasPrices && (
+      {hasPrices && bands.length > 1 && (
         <div className="mt-6 flex flex-wrap gap-2">
-          {PRICE_BANDS.map((b) => {
+          {bands.map((b) => {
             const isActive = (b.value ?? null) === (activeBand.value ?? null);
-            const href = b.value == null ? `/legjobb/${category.slug}` : `/legjobb/${category.slug}?maxAr=${b.value}`;
+            const href = b.value == null ? source.canonicalPath : `${source.canonicalPath}?maxAr=${b.value}`;
             return (
               <Link
                 key={b.label}
@@ -126,11 +272,24 @@ export default async function ToplistPage({ params, searchParams }: Props) {
 
       {top.length === 0 ? (
         <p className="mt-10 font-body text-ink/65">
-          Ebben a kategóriában még nincs értékelt teszt. Nézd meg az összes{' '}
-          <Link href={`/kategoria/${category.slug}`} className="font-medium text-teal-600 hover:underline">
-            {catName} tesztet
-          </Link>
-          .
+          {maxAr != null ? (
+            <>
+              Ebben az ársávban nincs értékelt teszt.{' '}
+              <Link href={source.canonicalPath} className="font-medium text-teal-600 hover:underline">
+                Nézd meg az összes {name} tesztet
+              </Link>
+              .
+            </>
+          ) : (
+            <>
+              Ehhez a listához még nincs értékelt teszt.{' '}
+              {source.categorySlug && (
+                <Link href={`/kategoria/${source.categorySlug}`} className="font-medium text-teal-600 hover:underline">
+                  Böngészd a kategóriát
+                </Link>
+              )}
+            </>
+          )}
         </p>
       ) : (
         <>
@@ -202,9 +361,7 @@ export default async function ToplistPage({ params, searchParams }: Props) {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display text-lg font-bold text-ink">
-                        {MEDALS[i] || `${i + 1}.`}
-                      </span>
+                      <span className="font-display text-lg font-bold text-ink">{MEDALS[i] || `${i + 1}.`}</span>
                       {p.rating != null && <RatingBadge rating={p.rating} size="sm" />}
                     </div>
                     <Link href={`/blog/${p.slug}`} className="group">
@@ -234,6 +391,19 @@ export default async function ToplistPage({ params, searchParams }: Props) {
             ))}
           </div>
         </>
+      )}
+
+      {/* Belső linkek: testvérosztályok és a kategória teljes toplistája */}
+      {siblingLinks.length > 0 && (
+        <ProductClassLinks
+          className="mt-14"
+          heading={
+            source.kind === 'class'
+              ? 'További toplisták ugyanebben a kategóriában'
+              : 'Termékosztály-toplisták ebben a kategóriában'
+          }
+          links={siblingLinks}
+        />
       )}
     </article>
   );
