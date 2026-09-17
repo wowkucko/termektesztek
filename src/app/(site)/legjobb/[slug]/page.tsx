@@ -10,7 +10,7 @@ import {
   getTopRatedPosts,
   type RankablePost,
 } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd, listingRobots } from '@/lib/seo';
+import { absoluteUrl, breadcrumbJsonLd, faqJsonLdFromItems, listingRobots } from '@/lib/seo';
 import { formatPriceFt } from '@/lib/utils';
 import {
   PRODUCT_CLASSES,
@@ -23,6 +23,7 @@ import {
   type PriceBand,
   type ProductClass,
 } from '@/lib/productClasses';
+import { productClassContent, type ProductClassContent } from '@/lib/productClassContent';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import ProductClassLinks from '@/components/site/ProductClassLinks';
 import { RatingBadge } from '@/components/site/VerdictStamp';
@@ -60,6 +61,8 @@ type ToplistSource = {
   crumbs: { name: string; href?: string }[];
   posts: RankablePost[];
   bands: PriceBand[];
+  /** Szerkesztői tartalom (vásárlási tanácsok, szempontok, GYIK) - csak osztályoknál. */
+  content: ProductClassContent | null;
   /** Az árszűrés előtti összes cikk (a vékony-tartalom döntéshez és a szöveghez). */
   totalCount: number;
   canonicalPath: string;
@@ -95,6 +98,7 @@ const resolveSource = cache(async (slug: string, maxAr: number | null): Promise<
       crumbs,
       posts,
       bands: priceBandsFor(cls),
+      content: productClassContent(cls.slug),
       totalCount: rankedAll.length,
       canonicalPath: `/legjobb/${cls.slug}`,
       metaTitle: `Legjobb ${cls.name} ${year} – toplista és összehasonlítás`,
@@ -134,6 +138,7 @@ const resolveSource = cache(async (slug: string, maxAr: number | null): Promise<
       { label: '100 ezer Ft alatt', value: 100000 },
       { label: '200 ezer Ft alatt', value: 200000 },
     ],
+    content: null,
     totalCount,
     canonicalPath: `/legjobb/${category.slug}`,
     metaTitle: `Legjobb ${catName} ${year} – toplista és összehasonlítás`,
@@ -193,6 +198,8 @@ export default async function ToplistPage({ params, searchParams }: Props) {
     }
   }
 
+  const faqJsonLd = faqJsonLdFromItems(source.content?.faq ?? []);
+
   const itemListJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -218,6 +225,9 @@ export default async function ToplistPage({ params, searchParams }: Props) {
         }}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      {faqJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
 
       <Breadcrumbs items={source.crumbs} />
 
@@ -267,6 +277,52 @@ export default async function ToplistPage({ params, searchParams }: Props) {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Szerkesztői tartalom: a rangsor előtt, hogy a látogató (és a kereső)
+          a döntéshez szükséges szempontokat is lássa, ne csak a listát. */}
+      {source.content && (
+        <div className="mt-12 grid gap-8 lg:grid-cols-2">
+          <section aria-labelledby="vasarlasi-tanacsok">
+            <h2 id="vasarlasi-tanacsok" className="font-display text-2xl font-bold text-ink">
+              Mire figyelj {name} vásárlásnál?
+            </h2>
+            <ul className="mt-4 space-y-4">
+              {source.content.tips.map((tip) => (
+                <li key={tip.title} className="rounded-card border border-line bg-white p-5">
+                  <p className="font-display text-base font-semibold text-ink">{tip.title}</p>
+                  <p className="mt-1.5 font-body text-sm leading-relaxed text-ink/70">{tip.text}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section aria-labelledby="rangsorolas-szempontjai">
+            <h2 id="rangsorolas-szempontjai" className="font-display text-2xl font-bold text-ink">
+              Mik alapján rangsoroltunk?
+            </h2>
+            <ul className="mt-4 space-y-4">
+              {source.content.criteria.map((c) => (
+                <li key={c.title} className="flex gap-3">
+                  <span aria-hidden="true" className="mt-0.5 font-display text-lg font-bold text-teal-600">
+                    ✓
+                  </span>
+                  <span>
+                    <span className="block font-display text-base font-semibold text-ink">{c.title}</span>
+                    <span className="mt-1 block font-body text-sm leading-relaxed text-ink/70">{c.text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 font-sans text-xs leading-relaxed text-ink/60">
+              A pontszámok a blogon megjelent tesztek értékelései. Részletek:{' '}
+              <Link href="/rolunk" className="font-medium text-teal-700 hover:underline">
+                tesztelési módszerünk
+              </Link>
+              .
+            </p>
+          </section>
         </div>
       )}
 
@@ -391,6 +447,25 @@ export default async function ToplistPage({ params, searchParams }: Props) {
             ))}
           </div>
         </>
+      )}
+
+      {/* GYIK: a látható kérdések és a FAQPage séma ugyanebből a listából épül */}
+      {source.content && source.content.faq.length > 0 && (
+        <section aria-labelledby="gyik" className="mt-14">
+          <h2 id="gyik" className="font-display text-2xl font-bold text-ink">
+            Gyakori kérdések a(z) {name} választásához
+          </h2>
+          <div className="mt-4 space-y-3">
+            {source.content.faq.map((item) => (
+              <details key={item.q} className="rounded-card border border-line bg-white p-4">
+                <summary className="cursor-pointer font-sans text-sm font-semibold text-ink">
+                  {item.q}
+                </summary>
+                <p className="mt-2 font-body text-sm leading-relaxed text-ink/75">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Belső linkek: testvérosztályok és a kategória teljes toplistája */}

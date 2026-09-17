@@ -117,6 +117,23 @@ export function postJsonLd(
   return { ...base, '@type': ['BlogPosting', 'Article'] };
 }
 
+/**
+ * FAQPage séma kérdés-válasz párokból (a termékosztály-toplisták GYIK-jéhez).
+ * A Google elvárása szerint ugyanaz a szöveg látható is az oldalon.
+ */
+export function faqJsonLdFromItems(items: { q: string; a: string }[]): object | null {
+  if (items.length === 0) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
+  };
+}
+
 export function faqJsonLd(post: PostWithRelations): object | null {
   // A FAQ kérdéseit az oldalon látható előnyök/hátrányok listából építjük fel -
   // a Google elvárása, hogy a kérdések és válaszok megjelenjenek a lapon.

@@ -251,8 +251,18 @@ hasonlítja a terméket egy másik osztályhoz ("nem hajformázó, hanem szárí
 termék átkerülne a másik listába. A kiegészítők, tartozékok, pótaskatrészek és szakácskönyvek
 kimaradnak a rangsorokból (`isAccessoryPost`), mert egy "legjobb X" listában nem termékek.
 
+Az osztály-oldalakon a rangsor mellé **szerkesztői tartalom** is kerül a
+`src/lib/productClassContent.ts`-ből: „Mire figyelj X vásárlásnál?" (3 tanács), „Mik alapján
+rangsoroltunk?" (3 átlátható szempont) és „Gyakori kérdések" (4 kérdés-válasz, amiből a
+`FAQPage` séma is épül — a Google elvárása szerint ugyanaz látható az oldalon). A szöveg
+osztályonként egyedi, mert a sablonos, minden oldalon ismétlődő blokk pont az, amit a kereső
+duplikált tartalomként kezel. A tanácsok vásárlási szempontok, nem saját mérési állítások —
+a pontszámok a blogon megjelent tesztek értékelései.
+
 Új osztály felvétele: egy bejegyzés a `PRODUCT_CLASSES` tömbben (slug, név, kategória, kulcsszavak,
-opcionális kizárások, ársávok, bevezető). Ellenőrzés:
+opcionális kizárások, ársávok, bevezető), és hozzá a szöveges tartalom a
+`PRODUCT_CLASS_CONTENT` térképben (ha nincs, a listaoldal tartalom nélkül, de hibátlanul
+megjelenik). Ellenőrzés:
 
 ```bash
 npm run classes:check   # osztályonkénti cikkszám + példacímek
