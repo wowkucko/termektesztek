@@ -292,6 +292,11 @@ osztály-toplistákat sorolja fel ("A kategória legjobbjai").
   egy-két cikkes címke- és márkaoldalak (a törzskészlet nagy része) kimaradnak belőle.
   A szabály egy helyen van: `MIN_POSTS_FOR_LISTING_INDEX` + `listingRobots()` a `src/lib/seo.ts`-ben.
 - RSS feed a `/rss.xml` alatt
+- **Dinamikus OG-képek**: minden cikk (`/blog/{slug}/og`) és toplistalap (`/legjobb/{slug}/og`)
+  saját, kérelemkor renderelt megosztási képet kap (cím, terméknév, pontszám) — sharp + SVG
+  úton, a site arculatával. A cikkeknél az admin `ogImage` override-ja elsőbbségű.
+  (A Next 14 `next/og` satori-alapú `opengraph-image.tsx` konvenciója Windows-on modul-
+  betöltési hibával elszáll, ezért nem az van használva — lásd `src/lib/ogImage.ts` fejlécét.)
 - **`npm run seo:audit`** — build/deploy után futtatható audit: lekéri a fő oldaltípusok
   (főoldal, cikk, kategória, címke, márka, toplistalap, szezonális hubok) HTML-jét egy futó
   szerverről, és hibát jelez, ha hiányzik az og:image, a canonical vagy az elvárt JSON-LD.

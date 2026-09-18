@@ -155,6 +155,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const title = band?.value ? `${source.metaTitle.split(' – ')[0]} – ${band.label.toLowerCase()} – toplista` : source.metaTitle;
   const description = band?.value ? source.metaDescription.replace('Rangsor', `${band.label} szűrve. Rangsor`) : source.metaDescription;
 
+  // Megosztási kép: a toplista dinamikus OG-kártyája (/legjobb/{slug}/og —
+  // cím + top-3 termék pontszámmal). Stabil URL, explicit images-szel.
+  const ogImageUrl = absoluteUrl(`/legjobb/${params.slug}/og`);
+
   return {
     title,
     description,
@@ -162,7 +166,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // mindig az alap URL-re mutat. A vékony (<3 cikkes) osztályok noindexet kapnak.
     robots: listingRobots(source.totalCount),
     alternates: { canonical: absoluteUrl(source.canonicalPath) },
-    openGraph: { title, description, url: absoluteUrl(source.canonicalPath) },
+    openGraph: { title, description, url: absoluteUrl(source.canonicalPath), images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }] },
+    // A layout twitter:image-je (og-default) felülírása, hogy itt is a dinamikus
+    // kártya menjen megosztáskor.
+    twitter: { card: 'summary_large_image', title, description, images: [ogImageUrl] },
   };
 }
 

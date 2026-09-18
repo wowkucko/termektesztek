@@ -62,8 +62,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = post.seoTitle || post.title;
   const description = post.seoDescription || truncate(post.excerpt, 160);
-  // Ha nincs sem egyedi OG kép, sem borító, az alapértelmezett megosztási kép jelenik meg
-  const image = post.ogImage || post.coverImage || '/og-default.png';
+
+  // Megosztási kép: alapból a cikkhez renderelt dinamikus OG-kártya
+  // (/blog/{slug}/og — cím, termék, pontszám); ha az admin explicit ogImage-et adott
+  // meg, az nyer. Stabil URL, ezért explicit images-szel adjuk meg.
+  const ogImageUrl = absoluteUrl(post.ogImage || `/blog/${post.slug}/og`);
 
   return {
     title,
@@ -76,7 +79,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: absoluteUrl(`/blog/${post.slug}`),
-      images: [{ url: absoluteUrl(image), width: 1200, height: 630, alt: title }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
       publishedTime: post.publishedAt?.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
     },
@@ -84,7 +87,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: 'summary_large_image',
       title,
       description,
-      images: [absoluteUrl(image)],
+      images: [ogImageUrl],
     },
     robots: {
       index: true,
