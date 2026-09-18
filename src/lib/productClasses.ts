@@ -232,6 +232,9 @@ const ACCESSORY_KEYWORDS = [
   'vedofilm',
   'szakacskonyv',
   'konyv',
+  // Nyomtató tartozék SKU (pl. "AnkerMake M5 sárgaréz fúvóka 0.8mm") — két fúvóka
+  // összehasonlítása értelmetlen páros lenne a compare-ben és a toplistákban is.
+  'fuvoka',
 ];
 
 export function isAccessoryPost(post: Pick<RankablePost, 'title' | 'productName'>): boolean {

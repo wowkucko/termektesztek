@@ -19,7 +19,7 @@ type PostRaw = Prisma.PostGetPayload<{ include: typeof postListInclude }>;
 // tömb típus), ezért minden lekérdezés után feloldjuk őket valódi tömbbé.
 export type PostWithRelations = Omit<PostRaw, 'pros' | 'cons'> & { pros: string[]; cons: string[] };
 
-function safeParseStringArray(value: string): string[] {
+export function safeParseStringArray(value: string): string[] {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
@@ -427,10 +427,12 @@ export type RankablePost = {
   publishedAt: Date | null;
   category: { name: string; slug: string };
   tags: { tag: { name: string } }[];
+  pros: string[];
+  cons: string[];
 };
 
 export const getRankablePosts = cache(async (): Promise<RankablePost[]> => {
-  return prisma.post.findMany({
+  const rows = await prisma.post.findMany({
     where: publishedWhere,
     select: {
       id: true,
@@ -447,9 +449,17 @@ export const getRankablePosts = cache(async (): Promise<RankablePost[]> => {
       publishedAt: true,
       category: { select: { name: true, slug: true } },
       tags: { select: { tag: { select: { name: true } } } },
+      // Az összehasonlító táblázat első előnye Ezekből jön (később parse-olva)
+      pros: true,
+      cons: true,
     },
     orderBy: { publishedAt: 'desc' },
   });
+  return rows.map((row) => ({
+    ...row,
+    pros: safeParseStringArray(row.pros),
+    cons: safeParseStringArray(row.cons),
+  }));
 });
 
 // Címke-oldal vékony-tartalom döntéséhez: hány PUBLIKÁLT cikk tartozik a címkéhez.

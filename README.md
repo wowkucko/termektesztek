@@ -436,4 +436,45 @@ npm run lighthouse:ci
 - Kép-CDN vagy felhő tárhely (pl. S3-kompatibilis) a `public/uploads` helyett, ha a forgalom
   ezt indokolttá teszi
 - Kommentek, hírlevél-feliratkozás
-- Termék-összehasonlító táblázatok több teszt között
+- Interaktív választó a cikkekben (dropdown a compare-partnerek közé)
+
+## 9. Cikken belüli összehasonlító táblázat
+
+A cikkoldalakon a **végső verdikt után** szerver-renderelt táblázat hasonlítja össze a
+tesztelt terméket az azonos termékosztályú, tényleg hasonló párokkal („óra csak órával”).
+Mobilon a tábla a konténerén belül vízszintesen görgethető (a grid-oszlop `min-w-0`, a
+tábla `min-w-[640px]` — így nem húzza szét a layoutot), a linkek tap-targetje ≥36px.
+
+**Szabályok (`src/lib/compare.ts`):**
+- Kemény guardok: a partner azonos termékosztályba kell, hogy eszen („ora csak oraval”), nem
+  lehet kiegészítő (`isAccessoryPost`), nem lehet 18+ (`isAdultContent`), és kell legyen pontszáma.
+- Soft küszöb: `COMPARE_MIN_SCORE = 5` — azonos márka (+3), közös címke (+2), azonos sorozat
+  (+2), közeli ársáv (+2/+1), közel egyenrangú pontszám (+1) jelzésekből. Emellett kell közös
+  címke VAGY azonos márka is (puszta ár-közelség nem elég).
+- Cikkenként max. 2 partner; cím, pontszám, ár, fő előny/hátrány (a cikkből), vásárlás gomb és
+  „Részletes teszt →” link. Ha a cikknek nincs ára, az ár helyett `—` jelenik meg.
+- A párok mellé „Miért ezek a párok?” magyarázat megy (a match `reasons` alapján).
+
+**Kalibráció és ellenőrzés:** `npm run compare:check` — a valódi adatokon listázza, hány cikk
+kap táblázatot és mik a párosok (a küszöb módosításánál mindig ezzel kalibrálj).
+
+### Vs-oldalak (`/osszehasonlitas`)
+
+A cikken belüli párosításból állóoldalak készülnek a „X vs Y" keresésekre:
+
+- **`/osszehasonlitas`** — hub: a minőségi párosok termékosztályonként csoportosítva.
+- **`/osszehasonlitas/{a-vs-b}`** — páros oldal: verdikt (pontszám + ár), táblázat, „Miért
+  hasonlítjuk őket?" magyarázat, BreadcrumbList + FAQPage JSON-LD. **Csak él, ha a compare-motor
+  minősíti a párost** (azonos osztály, pontozott, nem kiegészítő, nem 18+, küszöb) — minden más
+  slug 404, a URL-t nem lehet rossz párossal megbukni.
+- **Canonical az ábécérendi slug**: a csere-sorrend 308-as permanent redirect-tel odairányít.
+- **Sitemap-szűrés**: csak a `VS_SITEMAP_MIN_SCORE` (9) pontot elérő, `VS_SITEMAP_LIMIT` (150)
+  darab páros indexelhető és kerül a sitemapbe + a hub; a többi élő páros **noindex, follow**.
+  Így a vs-oldalak tömege nem eszi meg a crawl budgetet (a címke-lecke alkalmazása).
+- A cikken belüli táblázatban a minőségi párosokra „Párharc →" link visz.
+- Buktató: a blogcikk-címek is tartalmazhatnak `-vs-`-t, ezért a URL-feloldás (`resolveComparePair`)
+  a pool ellen próbálja ki az összes szétvágási pontot — ne egyszerűsítsd első `-vs-` vágásra.
+
+**Fontos:** az osztály-besorolás memoizált modulszinten — új compare-forrás (pl. vs-oldal)
+hozzáadásakor győződj meg róla, hogy a `findCompareMatches` hívás nem kerül per-kérés
+súrlószáraz ismétlésbe.

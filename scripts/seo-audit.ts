@@ -23,6 +23,18 @@ import {
   productClassCounts,
 } from '../src/lib/productClasses';
 import { isAdultContent } from '../src/lib/adultContent';
+import { listComparePairs, vsSitemapPairs } from '../src/lib/compare';
+
+// A data.ts-beli segéd lokális mása: a data.ts-et szándékosan NEM importáljuk
+// (a React cache()-je sima Node-ban nem hívható — lásd fent).
+function safeParseStringArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 // Megjegyzés: a src/lib/data.ts-t szándékosan NEM importáljuk (a React cache()-je
 // sima Node-ban nem hívható, lásd a check-product-classes.ts konvencióját) —
@@ -167,10 +179,17 @@ async function resolveChecks(): Promise<Check[]> {
         publishedAt: true,
         category: { select: { name: true, slug: true } },
         tags: { select: { tag: { select: { name: true } } } },
+        pros: true,
+        cons: true,
       },
       orderBy: { publishedAt: 'desc' },
     });
-    const counts = productClassCounts(rankable)
+    const parsedPosts = rankable.map((row) => ({
+      ...row,
+      pros: safeParseStringArray(row.pros),
+      cons: safeParseStringArray(row.cons),
+    }));
+    const counts = productClassCounts(parsedPosts)
       .filter(({ count }) => count >= MIN_POSTS_FOR_PRODUCT_CLASS)
       .sort((a, b) => b.count - a.count);
     if (counts[0]) {
@@ -180,8 +199,24 @@ async function resolveChecks(): Promise<Check[]> {
         jsonLdTypes: ['BreadcrumbList', 'ItemList'],
       });
     }
+
+    // A legjobb indexelt vs-páros (/osszehasonlitas/a-vs-b) — ugyanaz a
+    // sitemap-küszöb (vsSitemapPairs), amit a sitemap is használ.
+    const pair = vsSitemapPairs(listComparePairs(parsedPosts))[0];
+    if (pair) {
+      checks.push({
+        label: 'Vs-páros oldal',
+        url: `${BASE_URL}/osszehasonlitas/${pair.slug}`,
+        jsonLdTypes: ['BreadcrumbList', 'FAQPage'],
+      });
+      checks.push({
+        label: 'Vs-hub',
+        url: `${BASE_URL}/osszehasonlitas`,
+        jsonLdTypes: ['BreadcrumbList'],
+      });
+    }
   } catch {
-    console.warn('  (DB hiba: toplistalap kimaradt az auditból)');
+    console.warn('  (DB hiba: toplistalap és vs-oldalak kimaradtak az auditból)');
   }
 
   return checks;

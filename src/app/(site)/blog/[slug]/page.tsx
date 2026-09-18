@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';import { getPostBySlug, getPublishedPostSlugs, getRelatedPosts, getRelevantPosts, getPostComments, getCommentStats } from '@/lib/data';
+import rehypeRaw from 'rehype-raw';import { getPostBySlug, getPublishedPostSlugs, getRelatedPosts, getRelevantPosts, getPostComments, getCommentStats, getRankablePosts } from '@/lib/data';
 import { SITE_NAME, absoluteUrl, breadcrumbJsonLd, faqJsonLd, postJsonLd } from '@/lib/seo';
 import { formatDate, formatPriceFt, readingTimeMinutes, slugify, truncate } from '@/lib/utils';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
@@ -18,6 +18,8 @@ import CommentSection from '@/components/site/CommentSection';
 import AdSlot from '@/components/site/AdSlot';
 import AgeGate from '@/components/site/AgeGate';
 import ProductClassLinks from '@/components/site/ProductClassLinks';
+import CompareTable from '@/components/site/CompareTable';
+import { findCompareMatches } from '@/lib/compare';
 import { slots } from '@/lib/ads';
 import { ADULT_CONSENT_COOKIE, hasAdultConsent, isAdultContent } from '@/lib/adultContent';
 import { productClassesForPost } from '@/lib/productClasses';
@@ -138,10 +140,16 @@ export default async function PostPage({ params }: Props) {
   const related = await getRelatedPosts(post);
   const relevant = await getRelevantPosts(post, 5);
   const minutes = readingTimeMinutes(post.content);
-  const [comments, commentStats] = await Promise.all([
+  const [comments, commentStats, rankable] = await Promise.all([
     getPostComments(post.id),
     getCommentStats(post.id),
+    // Az összehasonlító párokhoz: minden publikált cikk (cache-elt kérésenként)
+    getRankablePosts(),
   ]);
+
+  // Összehasonlító táblázat: csak azonos termékosztályú, valóban hasonló
+  // termékekkel (lásd src/lib/compare.ts — hard guard + pontozási küszöb).
+  const compareMatches = findCompareMatches(post, rankable, 2);
 
   const crumbs = [
     { name: 'Kezdőlap', href: '/' },
@@ -249,7 +257,8 @@ export default async function PostPage({ params }: Props) {
       </div>
 
       <div className="container-page mt-16 grid gap-10 lg:grid-cols-[1fr,280px]">
-        <div className="post-content">
+        {/* min-w-0: grid-elemként különben a min-w-[640px] compare-tábla széthúzná a layoutot mobilon */}
+        <div className="post-content min-w-0">
           {(post.productName || post.affiliateUrl) && (
             <div className="not-prose mb-8 rounded-card border border-line bg-teal-50/50 p-5">
               <p className="font-sans text-xs font-semibold uppercase tracking-wide text-teal-700">
@@ -331,6 +340,9 @@ export default async function PostPage({ params }: Props) {
               <p className="mt-2 font-body text-lg leading-relaxed text-ink">{post.verdict}</p>
             </div>
           )}
+
+          {/* Az összehasonlítás a verdikt után: előbb a döntés, aztán a párharc */}
+          <CompareTable current={post} matches={compareMatches} />
 
           {faqQa.length > 0 && (
             <section aria-label="Gyakori kérdések" className="not-prose my-8">

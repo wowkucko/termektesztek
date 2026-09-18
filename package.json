@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "adult:check": "tsx scripts/check-adult-content.ts",
     "classes:check": "tsx scripts/check-product-classes.ts",
+    "compare:check": "tsx scripts/check-compare.ts",
     "seo:audit": "tsx scripts/seo-audit.ts",
     "db:studio": "prisma studio",
     "push": "node scripts/push-posts.mjs",

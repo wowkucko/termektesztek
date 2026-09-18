@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getRankablePosts } from '@/lib/data';
 import { MIN_POSTS_FOR_LISTING_INDEX, SITE_URL } from '@/lib/seo';
 import { MIN_POSTS_FOR_PRODUCT_CLASS, productClassCounts } from '@/lib/productClasses';
+import { listComparePairs, vsSitemapPairs } from '@/lib/compare';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -75,6 +76,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
+  // Vs-oldalak ("X vs Y"): CSAK a minőségi párosok kerülnek a sitemapbe —
+  // pontszám-küszöb (VS_SITEMAP_MIN_SCORE) és felső limit (VS_SITEMAP_LIMIT),
+  // hogy a vs-oldalak tömege ne egye a crawl budgetet (a címke-lecke).
+  // A küszöb alatti párok noindex, follow oldalak: élnek, de nem indexelve.
+  const vsRoutes: MetadataRoute.Sitemap = vsSitemapPairs(
+    listComparePairs(await getRankablePosts())
+  ).map((p) => ({
+    url: `${SITE_URL}/osszehasonlitas/${p.slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.6,
+  }));
+
+  // A vs-hub csak akkor indexelhető, ha van mögötte legalább egy indexelt páros
+  // (üres listával vékony oldal lenne — noindex esetet a robots már lekezeli).
+  const vsHubRoutes: MetadataRoute.Sitemap =
+    vsRoutes.length > 0
+      ? [
+          {
+            url: `${SITE_URL}/osszehasonlitas`,
+            lastModified: now,
+            changeFrequency: 'weekly',
+            priority: 0.5,
+          },
+        ]
+      : [];
+
   // Márka-hubok: ide is csak a legalább MIN_POSTS_FOR_LISTING_INDEX cikkes
   // márkák kerülnek (a 285 márkából ~170-nek egyetlen cikke van).
   const brandSlugs = new Set<string>();
@@ -99,5 +127,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...classRoutes,
     ...brandRoutes,
     ...tagRoutes,
+    ...vsHubRoutes,
+    ...vsRoutes,
   ];
 }
