@@ -9,6 +9,27 @@ declare global {
   }
 }
 
+// Az AdSense push() a DOM ÖSSZES betöltetlen ins elemét megpróbálja egyszerre
+// kitölteni, ezért több hirdetési egységnél (pl. a cikkoldalon 3 van) a második
+// és további push-ek "TagError: ... already have ads in them" hibát dobnak —
+// aszinkron módon, így a try/catch sem fogja el (Playwright auditban bukott fel).
+// Megoldás: a komponensek csak fill-kérelmet jelentenek, és egy rövid,
+// közös időablakban EGYETLEN push megy a könyvtárnak, ami az összes addig
+// mountolt, betöltetlen egységet egyszerre tölti.
+let fillRequested = false;
+function requestAdFill() {
+  if (fillRequested) return;
+  fillRequested = true;
+  window.setTimeout(() => {
+    fillRequested = false;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {
+      // hirdetésblokkoló / még be nem töltött script - csendben
+    }
+  }, 150);
+}
+
 // Egy kézi hirdetési egység. Csak akkor renderel, ha van publisher ID ÉS slot ID -
 export default function AdSlot({ slot, format = 'auto', label }: { slot: string; format?: string; label: string }) {
   const done = useRef(false);
@@ -16,11 +37,7 @@ export default function AdSlot({ slot, format = 'auto', label }: { slot: string;
   useEffect(() => {
     if (done.current) return;
     done.current = true;
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {
-      // hirdetésblokkoló / még be nem töltött script - csendben
-    }
+    requestAdFill();
   }, []);
 
   if (!ADSENSE_ID || !slot) return null;
