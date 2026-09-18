@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTopRatedOverall } from '@/lib/data';
-import { SITE_NAME, absoluteUrl } from '@/lib/seo';
+import { SITE_NAME, absoluteUrl, defaultOgImages } from '@/lib/seo';
 import SeasonHub from '@/components/site/SeasonHub';
 
 export const revalidate = 86400; // naponta frissül (szezonális oldal)
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description:
     'Black Friday vásárlási útmutató: a legjobbra értékelt termékeink rangsora magyar tesztekkel. Nézd meg, melyik akció éri meg ténylegesen.',
   alternates: { canonical: absoluteUrl('/black-friday') },
-  openGraph: { title: 'Black Friday útmutató', url: absoluteUrl('/black-friday') },
+  openGraph: { title: 'Black Friday útmutató', url: absoluteUrl('/black-friday'), images: defaultOgImages('Black Friday útmutató') },
 };
 
 export default async function BlackFridayPage() {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategoryBySlug, getPublishedPosts, getRankablePosts } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd, listingRobots } from '@/lib/seo';
+import { absoluteUrl, breadcrumbJsonLd, listingRobots, defaultOgImages } from '@/lib/seo';
 import {
   MIN_POSTS_FOR_PRODUCT_CLASS,
   countProductClassPosts,
@@ -33,7 +33,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     description,
     robots: listingRobots(total, page),
     alternates: { canonical: absoluteUrl(`/kategoria/${category.slug}`) },
-    openGraph: { title, description, url: absoluteUrl(`/kategoria/${category.slug}`) },
+    openGraph: { title, description, url: absoluteUrl(`/kategoria/${category.slug}`), images: defaultOgImages(title) },
   };
 }
 

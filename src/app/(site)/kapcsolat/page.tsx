@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
-import { SITE_NAME, SITE_URL, absoluteUrl } from '@/lib/seo';
+import { SITE_NAME, SITE_URL, absoluteUrl, defaultOgImages } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Kapcsolat',
   description: `Vedd fel a kapcsolatot a ${SITE_NAME} szerkesztőségével: kérdések, észrevételek, javítási javaslatok.`,
   alternates: { canonical: absoluteUrl('/kapcsolat') },
-  openGraph: { title: 'Kapcsolat', url: absoluteUrl('/kapcsolat') },
+  openGraph: { title: 'Kapcsolat', url: absoluteUrl('/kapcsolat'), images: defaultOgImages('Kapcsolat') },
 };
 
 function contactEmail(): string {

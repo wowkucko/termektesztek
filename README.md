@@ -276,6 +276,10 @@ osztály-toplistákat sorolja fel ("A kategória legjobbjai").
 ## 4. SEO, amit a projekt automatikusan kezel
 
 - Minden oldalhoz egyedi `<title>`, meta leírás, canonical URL, Open Graph és Twitter Card
+- **OG/Twitter kép minden oldalon**: a Next.js metadata shallow merge-t használ — ha egy oldal saját
+  `openGraph`-ot ad meg, az felülírja a layoutét, ezért az `images`-t mindig explicit módon kell megadni.
+  Erre való a `defaultOgImages()` segéd a `src/lib/seo.ts`-ben (a `DEFAULT_OG_IMAGE` konstansból).
+  Új oldalnál, ha saját OG-t adsz meg, mindig add hozzá az images-t is!
 - JSON-LD strukturált adat: `Review`/`Product` séma értékeléssel rendelkező cikkekhez (ez
   teszi lehetővé a csillagos értékelés megjelenését a Google találatokban), `FAQPage`
   (az előnyök/hátrányok listából automatikusan), `BreadcrumbList`, `WebSite`, `Organization`
@@ -288,6 +292,11 @@ osztály-toplistákat sorolja fel ("A kategória legjobbjai").
   egy-két cikkes címke- és márkaoldalak (a törzskészlet nagy része) kimaradnak belőle.
   A szabály egy helyen van: `MIN_POSTS_FOR_LISTING_INDEX` + `listingRobots()` a `src/lib/seo.ts`-ben.
 - RSS feed a `/rss.xml` alatt
+- **`npm run seo:audit`** — build/deploy után futtatható audit: lekéri a fő oldaltípusok
+  (főoldal, cikk, kategória, címke, márka, toplistalap, szezonális hubok) HTML-jét egy futó
+  szerverről, és hibát jelez, ha hiányzik az og:image, a canonical vagy az elvárt JSON-LD.
+  Az URL-eket az adatbázisból oldja fel (a legtöbb cikkel), a 18+ cikkeket kikerüli.
+  Cél URL: `SEO_AUDIT_BASE_URL=http://localhost:3100 npm run seo:audit`
 - Képoptimalizálás a `next/image`-dzsel (a `sharp` csomag telepítve van hozzá)
 - Szemantikus HTML, olvasható URL-ek (ékezetes címekből is helyes, ékezet nélküli slug készül)
 

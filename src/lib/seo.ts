@@ -8,6 +8,33 @@ export const SITE_DESCRIPTION =
   process.env.NEXT_PUBLIC_SITE_DESCRIPTION || 'Alapos, független terméktesztek és vásárlási tanácsok.';
 
 /**
+ * Alapértelmezett megosztási (og:image / twitter:image) kép. Ez az egyetlen hely,
+ * ahol a fájlnév szerepel - a cikkek metaadat-összeállítója is ezt importálja.
+ */
+export const DEFAULT_OG_IMAGE = '/og-default.png';
+
+/**
+ * A Next.js metadata shallow merge-t használ: ha egy oldal SAJÁT openGraph-ot
+ * ad meg, az teljes egészében felülírja a layoutét - így az og:image (és a
+ * többi layout-szintű OG mező) leesik róla. Ezért minden oldal, ami saját
+ * openGraph-ot definiál, explicit images-t is kap: ezzel a segéddel.
+ *
+ * A twitter meta NEM shallow merge-lődik, ha nincs saját twitter blokk: ilyenkor
+ * a Next.js a megoldott openGraph-ból vezeti le (lásd resolve-metadata.js,
+ * file-based metadata fallback). Tehát twittert elég a layoutban tartani.
+ */
+export function defaultOgImages(alt?: string) {
+  return [
+    {
+      url: absoluteUrl(DEFAULT_OG_IMAGE),
+      width: 1200,
+      height: 630,
+      ...(alt ? { alt } : {}),
+    },
+  ];
+}
+
+/**
  * Ennyi publikált cikk alatt egy listaoldal (címke, márka, kategória) a Google
  * szemében vékony/duplikált tartalom: ilyenkor nem indexeljük, de a benne lévő
  * linkeket követjük - így a crawler továbbra is eljut az ott szereplő cikkekhez.

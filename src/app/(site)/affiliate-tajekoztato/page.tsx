@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
-import { SITE_NAME, absoluteUrl } from '@/lib/seo';
+import { SITE_NAME, absoluteUrl, defaultOgImages } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Affiliate tájékoztató',
   description: `Átlátható tájékoztatás a ${SITE_NAME} oldalain található partnerlinkekről (affiliate linkekről) és azok hatásáról az értékeléseinkre.`,
   alternates: { canonical: absoluteUrl('/affiliate-tajekoztato') },
-  openGraph: { title: 'Affiliate tájékoztató', url: absoluteUrl('/affiliate-tajekoztato') },
+  openGraph: { title: 'Affiliate tájékoztató', url: absoluteUrl('/affiliate-tajekoztato'), images: defaultOgImages('Affiliate tájékoztató') },
 };
 
 export default function AffiliatePage() {

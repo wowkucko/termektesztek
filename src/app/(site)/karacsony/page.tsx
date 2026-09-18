@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTopRatedOverall } from '@/lib/data';
-import { SITE_NAME, absoluteUrl } from '@/lib/seo';
+import { SITE_NAME, absoluteUrl, defaultOgImages } from '@/lib/seo';
 import SeasonHub from '@/components/site/SeasonHub';
 
 export const revalidate = 86400; // naponta frissül (szezonális oldal)
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description:
     'Karácsonyi ajándék ötletek a legjobbra értékelt termékeinkből: rangsorolt ajánlatok magyar nyelvű tesztekkel, pontszámokkal és vásárlási linkekkel.',
   alternates: { canonical: absoluteUrl('/karacsony') },
-  openGraph: { title: 'Karácsonyi ajándék ötletek', url: absoluteUrl('/karacsony') },
+  openGraph: { title: 'Karácsonyi ajándék ötletek', url: absoluteUrl('/karacsony'), images: defaultOgImages('Karácsonyi ajándék ötletek') },
 };
 
 export default async function ChristmasPage() {

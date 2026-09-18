@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
-import { SITE_NAME, absoluteUrl } from '@/lib/seo';
+import { SITE_NAME, absoluteUrl, defaultOgImages } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Rólunk',
   description: `Ismerd meg a ${SITE_NAME} csapatát: hogyan készülnek a magyar nyelvű terméktesztjeink, milyen módszerrel értékelünk.`,
   alternates: { canonical: absoluteUrl('/rolunk') },
-  openGraph: { title: 'Rólunk', url: absoluteUrl('/rolunk') },
+  openGraph: { title: 'Rólunk', url: absoluteUrl('/rolunk'), images: defaultOgImages('Rólunk') },
 };
 
 export default function AboutPage() {
