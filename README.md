@@ -382,7 +382,9 @@ URL-jét, és nyomd meg az **„Indexelés kérése”** gombot.
 
 A `lighthouse:ci` script friss production builden lefuttatja a Lighthouse auditot a
 főbb oldalakra (főoldal, legfrissebb cikk, a legtöbb cikket tartalmazó kategória és
-címke — az URL-eket a `scripts/resolve-audit-urls.ts` oldja fel az adatbázisból), és a
+címke, valamint a `/osszehasonlitas` vs-hub, a legmagasabb pontszámú indexelt vs-páros
+és egy küszöb alatti, noindex vs-páros — az URL-eket a `scripts/resolve-audit-urls.ts`
+oldja fel az adatbázisból, a compare-küszöböket a `src/lib/compare.ts`-ből veszi), és a
 `lighthouserc.js` `assert` szakaszában lévő küszöbértékekhez hasonlítja:
 
 - **Performance ≥ 80**
@@ -398,8 +400,10 @@ pontosan az `is-crawlable` súlyát engedi el), minden más oldalra a szigorú 0
 és a minta negatív lookahead-del fedi le a maradék URL-eket, hogy egy oldal se ússzon
 meg ellenőrzés nélkül. (A sima `assertions` érték csak egyetlen `[szint, beállítások]`
 párt fogad el — listát adva a Lighthouse CI csendben a saját alapértelmezett 0.9-ére
-esik vissza, ezért kell a mátrix.) Ha a fejlesztői/éles adatbázisban van már elég cikk,
-a resolver egyet sem jelöl meg, és minden vizsgált oldalra a 0.95-ös küszöb érvényes.
+esik vissza, ezért kell a mátrix.) A noindex-bucketbe a thin listaoldalak mellett a
+küszöb alatti (noindex, follow) vs-párosok is kerülnek; a vs-hub és az indexelt vs-páros
+a szigorú 0.95-ös bucketbe esik. Ha valamelyik oldal az adatbázisban nem létezik (pl.
+nincs még minőségi páros), a resolver egyszerűen kihagyja — a többi URL-re a 0.95 érvényes.
 
 A mérés **valódi (devtools) throttlinggal** történik: a Chrome ténylegesen 4×
 CPU-lassítással és mobil hálózati korlátozással tölti be az oldalt, tehát a pontszámok

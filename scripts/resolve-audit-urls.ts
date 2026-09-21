@@ -17,6 +17,18 @@ import { PrismaClient } from '@prisma/client';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { MIN_POSTS_FOR_LISTING_INDEX } from '../src/lib/seo';
+import { listComparePairs, vsSitemapPairs, VS_SITEMAP_MIN_SCORE } from '../src/lib/compare';
+
+// A data.ts-beli segéd lokális mása: a data.ts-et szándékosan NEM importáljuk
+// (a React cache()-je sima Node-ban nem hívható — lásd a check-compare.ts konvencióját).
+function safeParseStringArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 const BASE_URL = process.env.LHCI_BASE_URL || 'http://localhost:4321';
 
@@ -84,6 +96,66 @@ async function main() {
       }
     }
   } catch {}
+
+  // Vs-oldalak (/osszehasonlitas): a hub csak akkor megy az auditba, ha van
+  // indexelt páros mögötte (üres hub vékony oldal lenne). Párosból a legmagasabb
+  // pontszámú indexelt (sitemap-küszöb feletti) párost mérjük szigorú küszöbbel,
+  // és egy küszöb alatti, de élő (noindex, follow) párost is — arra az
+  // is-crawlable jogosan bukik, ezért enyhébb bucketbe kerül, mint a noindex
+  // listaoldalak (0.6): a küszöb alatti párosnak csak a crawlability hiánya megengedett.
+  try {
+    const rows = await prisma.post.findMany({
+      where: publishedWhere,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        excerpt: true,
+        coverImage: true,
+        coverImageAlt: true,
+        rating: true,
+        priceFt: true,
+        productName: true,
+        productBrand: true,
+        affiliateUrl: true,
+        publishedAt: true,
+        category: { select: { name: true, slug: true } },
+        pros: true,
+        cons: true,
+        tags: { select: { tag: { select: { name: true } } } },
+      },
+      orderBy: { publishedAt: 'desc' },
+    });
+    const rankable = rows.map((row) => ({
+      ...row,
+      pros: safeParseStringArray(row.pros),
+      cons: safeParseStringArray(row.cons),
+    }));
+    const allComparePairs = listComparePairs(rankable);
+    const sitemapPairUrls = vsSitemapPairs(allComparePairs).map(
+      (p) => `${BASE_URL}/osszehasonlitas/${p.slug}`
+    );
+    if (sitemapPairUrls.length > 0) {
+      const hubUrl = `${BASE_URL}/osszehasonlitas`;
+      urls.push(hubUrl, sitemapPairUrls[0]);
+      console.log(`  (vs-hub: ${sitemapPairUrls.length} indexelt páros, a legjobbat mérjük)`);
+      // Egy élő, de noindex páros is az auditba — csak ha van a küszöb alattító (különben
+      // ugyanazt az oldalt kétszer mérnénk).
+      const noindexCandidates = allComparePairs.filter(
+        (p) => p.score < VS_SITEMAP_MIN_SCORE
+      );
+      if (noindexCandidates.length > 0) {
+        const noindexUrl = `${BASE_URL}/osszehasonlitas/${noindexCandidates[0].slug}`;
+        if (!urls.includes(noindexUrl)) {
+          urls.push(noindexUrl);
+          noindexExpected.push(noindexUrl);
+          console.log(`  (noindex vs-páros: ${noindexCandidates[0].slug} [pontszám ${noindexCandidates[0].score}])`);
+        }
+      }
+    }
+  } catch {
+    // compare lib / DB hiba esetén a többi URL megy az auditba
+  }
 
   await prisma.$disconnect();
 

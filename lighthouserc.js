@@ -6,9 +6,10 @@
 // igazodnak. Ha a fájl hiányzik (pl. közvetlen `lhci autorun`), a főoldalra esik
 // vissza.
 //
-// A resolver a crawl-budget szabály alatti (kevés cikkes) listaoldalakat külön
-// listázza `noindexExpected` néven: azokon a noindex helyes viselkedés, ezért
-// rájuk enyhébb SEO-küszöb vonatkozik (lásd lent).
+// A resolver a crawl-budget szabály alatti (kevés cikkes) listaoldalakat és a
+// küszöb alatti (élő, de noindex) vs-párosokat külön listázza `noindexExpected`
+// néven: azokon a noindex helyes viselkedés, ezért rájuk enyhébb SEO-küszöb
+// vonatkozik (lásd lent).
 
 const fs = require('node:fs');
 
@@ -50,14 +51,17 @@ if (process.env.LHCI_NO_SANDBOX) {
 // utáni hosszú feladatokat TBT-ként számolja — a teljes main-thread munka
 // változatlan (1.4s), csak átcsúszott a festés utánra.
 const SEO_MIN_SCORE = 0.95;
-// A szándékosan noindex listaoldalakon a Lighthouse `is-crawlable` auditja
+// A szándékosan noindex oldalakon a Lighthouse `is-crawlable` auditja
 // jogosan bukik: a noindex itt nem hiba, hanem a crawl-budget szabály
-// (MIN_POSTS_FOR_LISTING_INDEX, lásd src/lib/seo.ts) szándékos következménye.
+// (MIN_POSTS_FOR_LISTING_INDEX a listaoldalakon, VS_SITEMAP_MIN_SCORE a
+// küszöb alatti vs-párosokon — lásd src/lib/seo.ts és src/lib/compare.ts)
+// szándékos következménye.
 // Ezekre ezért csak az is-crawlable hiányát engedjük meg: a SEO-pontszám így
 // 0.664, mert az is-crawlable súlya ~4.04 a ~12.04 összsúlyból. A 0.6-os küszöb
 // szándékosan szűk — bármely további audit elbukása (hiányzó cím/leírás,
 // canonical, státuszkód, robotok) 0.58 alá viszi a pontszámot, tehát pirosat
-// jelent. Minden más oldalra a szigorú 0.95 marad.
+// jelent. Minden más oldalra a szigorú 0.95 marad: a főoldal, cikk, toplisták,
+// a vs-hub és az indexelt vs-páros is ide tartozik.
 const SEO_MIN_SCORE_NOINDEX_EXPECTED = 0.6;
 
 const thresholds = (seoMinScore) => ({
@@ -77,7 +81,9 @@ const urlPattern = (list) => list.map(escapeRegex).join('|');
 // A két minta szándékosan fedi le az összes URL-t: a noindexes oldalakat pontosan
 // felsorolva (horgonyozva, különben a főoldal `http://host/` előtagként minden
 // másikra is illeszkedne), a többit pedig negatív lookahead-del, hogy egy
-// véletlenül kimaradó URL se ússzon meg ellenőrzés nélkül.
+// véletlenül kimaradó URL se ússzon meg ellenőrzés nélkül. A noindex-bucketbe a
+// resolver veszi fel a thin listaoldalakat ÉS a küszöb alatti vs-párosokat —
+// a vs-hub és az indexelt vs-páros a szigorú bucketbe esik.
 let assertOptions = { assertions: thresholds(SEO_MIN_SCORE) };
 if (noindexExpected.length > 0) {
   const thinPattern = urlPattern(noindexExpected);
