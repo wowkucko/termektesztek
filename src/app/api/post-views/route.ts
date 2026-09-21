@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (typeof id !== 'string' || !id) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    await recordPostView(id);
+    await recordPostView(request, id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     // Nem létező/eltávolított cikk id-ja (P2025): nincs mit számolni, nem hiba.

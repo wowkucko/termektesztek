@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (typeof id !== 'string' || !id) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    await recordPostAffiliateClick(id);
+    await recordPostAffiliateClick(request, id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const code = (e as { code?: string } | null)?.code;

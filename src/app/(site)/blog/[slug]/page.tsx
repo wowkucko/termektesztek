@@ -189,7 +189,12 @@ export default async function PostPage({ params }: Props) {
 
   // Megtekintésszámláló inline scriptként: a cikkoldalnak így NINCS saját
   // kliens komponense (nincs hidratáció-igénye), a view-mérés sima fetch.
-  const viewScript = `fetch('/api/post-views',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:${JSON.stringify(post.id)}})}).catch(()=>{})`;
+  // Bot-védelem 1. rétege (kliens): SOFT RELOAD (F5) nem számol újra —
+  // a flag a sessionStorage-ben él (tab-onként), reload esetén ha már áll,
+  // kilépünk. Valódi új navigáció (linkről érkezés, új tab, session restore)
+  // számol, a bfcache-visszatérésnél pedig a script amúgy sem fut újra.
+  // A szerver a guard-liben át IP-alapú TTL-deduppal + flood-plafonnal is védi.
+  const viewScript = `(function(){try{var K=${JSON.stringify(post.id)};var F='pv:'+K;var nav=performance.getEntriesByType('navigation')[0];var type=nav?nav.type:'navigate';if(type==='reload'&&sessionStorage.getItem(F)==='1')return;sessionStorage.setItem(F,'1');fetch('/api/post-views',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:K})}).catch(function(){});}catch(e){}})()`;
 
   // Affiliate kattintás-mérés: a cikk MINDEN affiliate linkjére (termékdoboz +
   // oldalsáv — egynek számít) kattintás-figyelő megy. sendBeacon: navigációkor

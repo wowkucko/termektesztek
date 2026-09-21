@@ -109,6 +109,19 @@ model PostDailyStat {
   @@index([day])
 }
 
+// Forgalom-mérés bot-védelme: a beérkező view/click jelek "hit"-ként deduplikálódnak.
+// key = sha256(napi só + IP + postId + jel típusa) — az IP hashelve tárolódik,
+// kódolva (GDPR/pszöudonimizálás), és a sorok elavulnak (cleanup).
+// TTL: view 6 óra, click 24 óra, flood-számláló 1 nap — lásd src/lib/traffic.ts.
+model TrafficGuard {
+  id        String   @id @default(cuid())
+  key       String   @unique // sha256 hash (keyType + day + ipHash + postId + kind)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
 // === Olvasói tartalom és keresési napló (SEO) ===
 
 // Blogkommentek + olvasói csillagozás (UGC: friss tartalom, aggregateRating a sémában)
