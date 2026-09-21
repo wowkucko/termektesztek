@@ -9,6 +9,15 @@ const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || '';
 export default function SiteScripts() {
   return (
     <>
+      {/* Süti-banner festés ELŐTTI elrejtése a korábban döntött látogatóknál:
+          az SSR-renderelt banner (CookieBanner) a hidrációig a DOM-ban marad,
+          ez a head-beli inline script dönt festéskor, hogy látszik-e — így a
+          már elutasított/elfogadott látogatóknál nem villan fel, és a banner
+          nem válik LCP-elemmé. Lásd: globals.css .cookie-decided szabály. */}
+      <Script id="cookie-hide" strategy="beforeInteractive" dangerouslySetInnerHTML={{
+        __html: `(function(){try{if(localStorage.getItem('cookie-consent')){document.documentElement.classList.add('cookie-decided');}}catch(e){}})();`,
+      }} />
+
       {GA_ID && (
         <>
           <Script

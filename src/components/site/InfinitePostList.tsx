@@ -85,8 +85,11 @@ export default function InfinitePostList({
   return (
     <div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((post) => (
-          <PostCardClient key={post.id} post={post} />
+        {items.map((post, i) => (
+          // A foldban levő (első sor) kártyaképek nem lazy-loadolódnak: a Lighthouse
+          // LCP-je a lazy első kártyaképen csúszott 4.7s-ra (score 0.32), ami a
+          // listaoldalak performance-ét 0.74-0.77-re vonta le.
+          <PostCardClient key={post.id} post={post} priority={i < 3} />
         ))}
       </div>
 

@@ -412,7 +412,8 @@ alapértelmezett „szimulált” módja ezen az oldalon ~4 s LCP-t jósolt, mik
 throttled mérés ~2 s — a szimuláció modellje pesszimista a kis, statikus oldalakra.
 A hátrány: a devtools mód gépenként kicsit ingadozhat (ugyanazon a gépen is
 0.79–0.99 közt szóródhat egy zajos futtatás), ezért a Performance küszöb 0.8.
-Referencia értékek (nyugodt gépen): főoldal 0.98, cikk 0.85–0.96, kategória/címke 0.99.)
+Referencia értékek (nyugodt gépen, 670 cikkes tartalommal): főoldal ~0.86, cikk ~0.85,
+kategória/címke ~0.91–0.92, vs-oldalak ~0.84–0.93.)
 
 A cikkoldal **saját kliens JS nélküli** (a megosztó linkek és a view-számláló szerver-
 oldali/inline; a mobilmenü csak az első megnyitáskor töltődik), ezért a böngésző
@@ -420,6 +421,13 @@ oldali/inline; a mobilmenü csak az első megnyitáskor töltődik), ezért a b�
 feladatokat TBT-ként számolja, így a cikkoldal TBT-je magasabban olvasható ki
 (miközben a teljes main-thread munka változatlan — a feladatok csak átcsúsztak a
 korábbi festés utánra), ami a Performance pontszámot ~0.85-re mérsékli.
+
+**LCP-javítások a listaoldalakon** (a 0.7x-es Performance-ok után):
+1. A listakártya-képek (`InfinitePostList` / főoldal) első 3 eleme `priority`-val
+   töltődik — a foldban lévő kép lazy-loadolása 4.7–5.7 s LCP-t adott.
+2. A süti-banner SSR-renderelt (FCP-kor fest), a korábban döntött látogatóknál a
+   `SiteScripts` head-beli inline scriptje + a `globals.css` `.cookie-decided` szabálya
+   rejti el festés előtt — a hidráció után "pop-in"-elő banner maga lett az LCP-elem.
 
 ```bash
 npm run lighthouse:ci

@@ -10,6 +10,15 @@ declare global {
   }
 }
 
+/**
+ * A banner az SSR HTML-ben szerepel (initial visible = true), tehát FCP-kor
+ * fest — nem "pop-in"-el a hidráció után (a késői megjelenés LCP-elemmé tud
+ * válni: a süti-szöveg festődött 5.7s-kor a Lighthouse-mérésben).
+ *
+ * A korábban már döntött látogatóknál a SiteScripts head-beli inline scriptje
+ * (`cookie-decided` osztály a <html>-en, a festés ELŐTT fut) + a globals.css
+ * szabálya rejti el — nincs villanás, és a banner LCP-elem sem lehet.
+ */
 function applyConsent(granted: boolean) {
   try {
     localStorage.setItem(STORAGE_KEY, granted ? 'granted' : 'denied');
@@ -25,7 +34,9 @@ function applyConsent(granted: boolean) {
 }
 
 export default function CookieBanner() {
-  const [visible, setVisible] = useState(false);
+  // SSR-en és első festéskor látszik (friss látogatónak szól); a döntötteket
+  // a head-script + CSS rejti el a festés előtt, a hidráció innen törli.
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     let stored: string | null = null;
@@ -34,9 +45,10 @@ export default function CookieBanner() {
     } catch {
       stored = null;
     }
-    if (!stored) {
-      setVisible(true);
-    } else if (stored === 'granted') {
+    if (stored) {
+      setVisible(false);
+    }
+    if (stored === 'granted') {
       // Korábbi elfogadás: a GA-script indulásakor még denied az alap,
       // ezért itt újra jelezzük a megadott hozzájárulást.
       window.gtag?.('consent', 'update', {
@@ -55,7 +67,7 @@ export default function CookieBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Süti hozzájárulás"
-      className="fixed inset-x-0 bottom-0 z-50 px-4 pb-4 sm:px-6 sm:pb-6"
+      className="cookie-banner fixed inset-x-0 bottom-0 z-50 px-4 pb-4 sm:px-6 sm:pb-6"
     >
       <div className="mx-auto max-w-2xl rounded-card border border-line bg-white p-5 shadow-card">
         <p className="font-display text-base font-bold text-ink">Sütik használata 🍪</p>

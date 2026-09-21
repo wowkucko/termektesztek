@@ -27,6 +27,15 @@
     @apply bg-paper text-ink font-body antialiased;
   }
 
+  /* Süti-banner elrejtése festés ELŐTT azoknál, akik már döntöttek a sütikről.
+     A SiteScripts head-beli inline scriptje teszi fel a 'cookie-decided' osztályt
+     a <html>-re, ha van cookie-consent bejegyzés — így az SSR-renderelt banner
+     (CookieBanner) nem villan fel a már döntött látogatóknál, és nem válhat
+     LCP-elemmé. A hidráció véglegesen törli a DOM-ból. */
+  html.cookie-decided .cookie-banner {
+    display: none;
+  }
+
   h1, h2, h3, h4 {
     @apply font-display;
   }

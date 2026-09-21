@@ -240,8 +240,9 @@ export default async function HomePage() {
           </p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {latestPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
+            {latestPosts.map((post, i) => (
+              // Első sor: foldban levő kártyaképek — nem lazy (LCP-javítás, lásd InfinitePostList)
+              <PostCard key={post.id} post={post} priority={i < 3} />
             ))}
           </div>
         )}

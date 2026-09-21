@@ -23,7 +23,7 @@ export type ClientPost = {
   adult?: boolean;
 };
 
-export default function PostCardClient({ post }: { post: ClientPost }) {
+export default function PostCardClient({ post, priority = false }: { post: ClientPost; priority?: boolean }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-card border border-line bg-white transition-shadow hover:shadow-card">
       <Link href={`/blog/${post.slug}`} className="relative block aspect-[4/3] overflow-hidden bg-teal-50">
@@ -32,6 +32,7 @@ export default function PostCardClient({ post }: { post: ClientPost }) {
             src={post.coverImage}
             alt={post.coverImageAlt || post.title}
             fill
+            priority={priority}
             sizes="(min-width: 1024px) 360px, (min-width: 640px) 45vw, 90vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
