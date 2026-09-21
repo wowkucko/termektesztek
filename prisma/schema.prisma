@@ -74,6 +74,7 @@ model Post {
   // script a /api/post-affiliate-click végpontot hívja sendBeacon-nel.
   affiliateClicks Int        @default(0)
   comments        Comment[]
+  dailyStats      PostDailyStat[]
 
   @@index([status, publishedAt])
   @@index([categoryId])
@@ -86,6 +87,26 @@ model PostTag {
   tag   Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([postId, tagId])
+}
+
+// Napi forgalmi statisztika cikkenként: a view/click mérővégpontok UPSERT-elik
+// az adott nap sorát (UTC-nap szerint), így az admin oldalon napi bontású
+// grafikon mutathatja a forgalom alakulását (utolsó 30 nap).
+// Megjegyzés: a PostDailyStat.views és .affiliateClicks összege NEM azonos
+// a Post.views és .affiliateClicks oszlopokkal — a napi mérés a séma-bevezetés
+// napjától áll, a Post oszlopok a teljes történetet adják.
+model PostDailyStat {
+  id             String   @id @default(cuid())
+  postId         String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  day            String   // UTC dátum "YYYY-MM-DD" formában (helyi éjfélhez igazított hétköznapok)
+  views          Int      @default(0)
+  affiliateClicks Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([postId, day])
+  @@index([day])
 }
 
 // === Olvasói tartalom és keresési napló (SEO) ===

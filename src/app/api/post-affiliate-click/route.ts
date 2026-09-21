@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { recordPostAffiliateClick } from '@/lib/traffic';
 
 // Publikus végpont az affiliate (Allegro) kattintások rögzítésére. A cikkoldal
 // inline scriptje hívja sendBeacon-nel (fire-and-forget: navigációkor is elküldi,
@@ -21,8 +21,7 @@ export async function POST(request: Request) {
     if (typeof id !== 'string' || !id) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    // Nyers SQL: ne bántja az updatedAt mezőt (ugyanaz a séma, mint a post-views-nál).
-    await prisma.$executeRaw`UPDATE "Post" SET "affiliateClicks" = "affiliateClicks" + 1 WHERE id = ${id}`;
+    await recordPostAffiliateClick(id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const code = (e as { code?: string } | null)?.code;

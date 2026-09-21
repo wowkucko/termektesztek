@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { getDailyTraffic } from '@/lib/traffic';
+import DailyTrafficChart from '@/components/admin/DailyTrafficChart';
 
 export const metadata: Metadata = { title: 'Statisztikák' };
 
@@ -35,6 +37,10 @@ export default async function AdminStatsPage({ searchParams }: { searchParams: S
       category: { select: { name: true } },
     },
   });
+
+  // Napi bontású forgalom az utolsó 30 napban (minden publikált cikk összege)
+  // + az időszak legtöbbet nézett cikkei.
+  const dailyPoints = await getDailyTraffic(30);
 
   // Összegző kártyák a SZŰRETLEN, teljes publikált állományról szólnak,
   // a táblázat pedig a szűrt eredményt mutatja.
@@ -95,6 +101,10 @@ export default async function AdminStatsPage({ searchParams }: { searchParams: S
           </p>
           <p className="mt-1 font-sans text-xs text-ink/50">Cikk affiliate linkkel</p>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <DailyTrafficChart points={dailyPoints} />
       </div>
 
       {/* GET űrlap: szerver-oldali szűrés kliens JS nélkül */}
@@ -211,9 +221,11 @@ export default async function AdminStatsPage({ searchParams }: { searchParams: S
       </div>
 
       <p className="mt-4 font-sans text-xs leading-relaxed text-ink/40">
-        A megtekintés a cikkoldal betöltésekor számolódik (bot-látogatást is beleszámít), az affiliate
-        kattintás a cikk bármely Allegro linkjére történő kattintás — a termékdoboz és az oldalsáv egynek
-        számít. Az arány kattintás / megtekintés.
+        A megtekintés a cikkoldal betöltésekor számolódik — bot-forgalom (crawler, monitor), az
+        azonos gépről 6 órán belüli ismételt betöltés és a puha újratöltés (F5) nem számol; egy IP
+        napi 25 új cikknél többet nem számol (scraper-védelem). Az affiliate kattintás a cikk
+        bármely Allegro linkjére történő kattintás — a termékdoboz és az oldalsáv egynek számít;
+        azonos gépről 24 órán belül csak egyszer. Az arány kattintás / megtekintés.
       </p>
     </div>
   );
