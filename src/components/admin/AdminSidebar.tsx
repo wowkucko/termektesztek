@@ -8,6 +8,7 @@ import LogoutButton from './LogoutButton';
 const links = [
   { href: '/admin', label: 'Áttekintés', exact: true },
   { href: '/admin/posts', label: 'Bejegyzések' },
+  { href: '/admin/statisztikak', label: 'Statisztikák' },
   { href: '/admin/sync', label: 'Auto szinkron' },
   { href: '/admin/push', label: 'Push to live' },
   { href: '/admin/linkcheck', label: 'Link-ellenőrzés' },

@@ -191,9 +191,16 @@ export default async function PostPage({ params }: Props) {
   // kliens komponense (nincs hidratáció-igénye), a view-mérés sima fetch.
   const viewScript = `fetch('/api/post-views',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:${JSON.stringify(post.id)}})}).catch(()=>{})`;
 
+  // Affiliate kattintás-mérés: a cikk MINDEN affiliate linkjére (termékdoboz +
+  // oldalsáv — egynek számít) kattintás-figyelő megy. sendBeacon: navigációkor
+  // is elküldi a jelet, nem blokkolja a távoást; body-ként a cikk id megy,
+  // a text/plain az egyetlen Content-Type, amit a sendBeacon garantáltan elfogad.
+  const affiliateClickScript = `(function(){try{document.querySelectorAll('[data-affiliate-id]').forEach(function(el){el.addEventListener('click',function(){if(navigator.sendBeacon){navigator.sendBeacon('/api/post-affiliate-click',new Blob([JSON.stringify({id:${JSON.stringify(post.id)}})],{type:'text/plain'}));}});});}catch(e){}})()`;
+
   return (
     <article className="pb-20">
       <script async dangerouslySetInnerHTML={{ __html: viewScript }} />
+      <script async dangerouslySetInnerHTML={{ __html: affiliateClickScript }} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -278,6 +285,7 @@ export default async function PostPage({ params }: Props) {
                   href={post.affiliateUrl}
                   target="_blank"
                   rel="sponsored noopener noreferrer"
+                  data-affiliate-id={post.id}
                   className="btn-primary mt-4"
                 >
                   Termék megvásárlása
@@ -440,6 +448,7 @@ export default async function PostPage({ params }: Props) {
                       href={post.affiliateUrl}
                       target="_blank"
                       rel="sponsored noopener noreferrer"
+                      data-affiliate-id={post.id}
                       className="btn-primary mt-3"
                     >
                       Termék megvásárlása

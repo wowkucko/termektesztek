@@ -68,8 +68,12 @@ model Post {
   seoDescription String?
   ogImage        String?
 
-  views          Int        @default(0)
-  comments       Comment[]
+  views           Int        @default(0)
+  // Affiliate (Allegro) kattintások: a cikkoldalon bármely affiliate linkre
+  // (termékdoboz + oldalsáv — egynek számít) történő kattintások. Az inline
+  // script a /api/post-affiliate-click végpontot hívja sendBeacon-nel.
+  affiliateClicks Int        @default(0)
+  comments        Comment[]
 
   @@index([status, publishedAt])
   @@index([categoryId])
