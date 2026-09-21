@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { getDailyTraffic } from '@/lib/traffic';
+import { getDailyTraffic, getTopPostsLastDays } from '@/lib/traffic';
 import DailyTrafficChart from '@/components/admin/DailyTrafficChart';
 
 export const metadata: Metadata = { title: 'Statisztikák' };
@@ -40,7 +40,7 @@ export default async function AdminStatsPage({ searchParams }: { searchParams: S
 
   // Napi bontású forgalom az utolsó 30 napban (minden publikált cikk összege)
   // + az időszak legtöbbet nézett cikkei.
-  const dailyPoints = await getDailyTraffic(30);
+  const [dailyPoints, top] = await Promise.all([getDailyTraffic(30), getTopPostsLastDays(30, 5)]);
 
   // Összegző kártyák a SZŰRETLEN, teljes publikált állományról szólnak,
   // a táblázat pedig a szűrt eredményt mutatja.
@@ -106,6 +106,50 @@ export default async function AdminStatsPage({ searchParams }: { searchParams: S
       <div className="mt-6">
         <DailyTrafficChart points={dailyPoints} />
       </div>
+
+      {/* Top 5: mi hajtja a forgalmat (napi mérés alapján, utolsó 30 nap) */}
+      {top.items.length > 0 && (
+        <div className="mt-6 rounded-card border border-line bg-white p-5">
+          <h2 className="font-display text-lg font-bold text-ink">Mi hajtja a forgalmat?</h2>
+          <p className="mt-1 font-sans text-xs text-ink/50">
+            A legtöbbet nézett cikkek az utolsó 30 napban — összesen{' '}
+            {top.totalViews.toLocaleString('hu-HU')} megtekintés az időszakban (napi mérés szerint).
+          </p>
+          <ol className="mt-4 divide-y divide-line rounded-tight border border-line">
+            {top.items.map((item, i) => (
+              <li key={item.id} className="px-4 py-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="flex min-w-0 items-baseline gap-3">
+                    <span className="font-display text-sm font-bold text-signal-600">{i + 1}.</span>
+                    <a
+                      href={`/blog/${item.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="truncate font-sans text-sm font-medium text-ink hover:text-teal-600 hover:underline"
+                    >
+                      {item.title}
+                    </a>
+                    <span className="shrink-0 font-sans text-xs text-ink/40">{item.category}</span>
+                  </div>
+                  <div className="flex shrink-0 items-baseline gap-4 font-sans text-sm">
+                    <span className="font-semibold text-ink">{item.views.toLocaleString('hu-HU')} nézet</span>
+                    <span className="w-14 text-right text-ink/50">{item.sharePct.toFixed(1)}%</span>
+                  </div>
+                </div>
+                {/* részarány-sáv: a lista éllovasahoz viszonyítva */}
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/5">
+                  <div
+                    className="h-full rounded-full bg-teal-500"
+                    style={{
+                      width: `${Math.max(2, (item.sharePct / (top.items[0]?.sharePct || 1)) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* GET űrlap: szerver-oldali szűrés kliens JS nélkül */}
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-card border border-line bg-white p-4">
