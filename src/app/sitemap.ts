@@ -4,6 +4,7 @@ import { getRankablePosts } from '@/lib/data';
 import { MIN_POSTS_FOR_LISTING_INDEX, SITE_URL } from '@/lib/seo';
 import { MIN_POSTS_FOR_PRODUCT_CLASS, productClassCounts } from '@/lib/productClasses';
 import { listComparePairs, vsSitemapPairs } from '@/lib/compare';
+import { slugify } from '@/lib/utils';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -12,9 +13,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [posts, categories, tags] = await Promise.all([
     prisma.post.findMany({
       where: publishedWhere,
-      select: { slug: true, updatedAt: true },
+      select: {
+        slug: true,
+        updatedAt: true,
+        categoryId: true,
+        productBrand: true,
+        tags: { select: { tag: { select: { slug: true } } } },
+      },
     }),
-    prisma.category.findMany({ select: { slug: true } }),
+    prisma.category.findMany({ select: { id: true, slug: true } }),
     // A címkeoldalak nagy része 1-2 cikkes, vékony listaoldal: ezeket nem
     // érdemes a sitemapben kínálni, mert elviszik a crawl budgetet a cikkek
     // elől (ráadásul duplikálják a cikklistát). A küszöb alattiak noindexet
@@ -29,6 +36,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   ]);
 
+  // A listaoldalak lastModified-je a mögöttes legfrissebb cikk updatedAt-je:
+  // a Google így látja, mikor frissült utoljára a kategória/címke/márka lista.
+  const latestByCategory = new Map<string, Date>();
+  const latestByTag = new Map<string, Date>();
+  const latestByBrand = new Map<string, Date>();
+  for (const p of posts) {
+    const prevCat = latestByCategory.get(p.categoryId);
+    if (!prevCat || p.updatedAt > prevCat) latestByCategory.set(p.categoryId, p.updatedAt);
+    for (const { tag } of p.tags) {
+      const prevTag = latestByTag.get(tag.slug);
+      if (!prevTag || p.updatedAt > prevTag) latestByTag.set(tag.slug, p.updatedAt);
+    }
+    if (p.productBrand) {
+      const brandSlug = slugify(p.productBrand);
+      const prevBrand = latestByBrand.get(brandSlug);
+      if (!prevBrand || p.updatedAt > prevBrand) latestByBrand.set(brandSlug, p.updatedAt);
+    }
+  }
+
   const indexableTags = tags.filter((t) => t._count.posts >= MIN_POSTS_FOR_LISTING_INDEX);
 
   // A /kereses noindex - nem kerül a sitemapbe sem.
@@ -37,6 +63,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/karacsony`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/black-friday`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/rolunk`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${SITE_URL}/kapcsolat`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${SITE_URL}/affiliate-tajekoztato`, changeFrequency: 'yearly', priority: 0.2 },
   ];
 
   const postRoutes: MetadataRoute.Sitemap = posts.map((p) => ({
@@ -48,12 +76,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
     url: `${SITE_URL}/kategoria/${c.slug}`,
+    ...(latestByCategory.get(c.id) ? { lastModified: latestByCategory.get(c.id) } : {}),
     changeFrequency: 'weekly',
     priority: 0.6,
   }));
 
   const tagRoutes: MetadataRoute.Sitemap = indexableTags.map((t) => ({
     url: `${SITE_URL}/cimke/${t.slug}`,
+    ...(latestByTag.get(t.slug) ? { lastModified: latestByTag.get(t.slug) } : {}),
     changeFrequency: 'weekly',
     priority: 0.4,
   }));
@@ -61,6 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Toplisták ("legjobb X" hub-oldalak) - erős keresőforgalmi oldalak
   const toplistRoutes: MetadataRoute.Sitemap = categories.map((c) => ({
     url: `${SITE_URL}/legjobb/${c.slug}`,
+    ...(latestByCategory.get(c.id) ? { lastModified: latestByCategory.get(c.id) } : {}),
     changeFrequency: 'weekly',
     priority: 0.7,
   }));
@@ -113,7 +144,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (b.count < MIN_POSTS_FOR_LISTING_INDEX) continue;
       if (brandSlugs.has(b.slug)) continue;
       brandSlugs.add(b.slug);
-      brandRoutes.push({ url: `${SITE_URL}/marka/${b.slug}`, changeFrequency: 'weekly', priority: 0.6 });
+      brandRoutes.push({
+        url: `${SITE_URL}/marka/${b.slug}`,
+        ...(latestByBrand.get(b.slug) ? { lastModified: latestByBrand.get(b.slug) } : {}),
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      });
     }
   } catch {
     // DB-hiba esetén a sitemap a többi útvonallal így is legenerálódik

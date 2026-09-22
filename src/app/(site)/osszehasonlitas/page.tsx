@@ -8,7 +8,7 @@ import {
   VS_SITEMAP_LIMIT,
 } from '@/lib/compare';
 import { getProductClass } from '@/lib/productClasses';
-import { absoluteUrl, defaultOgImages, breadcrumbJsonLd, SITE_NAME } from '@/lib/seo';
+import { absoluteUrl, defaultOgImages, breadcrumbJsonLd, SITE_NAME, baseOpenGraph } from '@/lib/seo';
 
 /**
  * /osszehasonlitas hub: a minőségi párosok termékosztályonként csoportosítva.
@@ -18,20 +18,17 @@ import { absoluteUrl, defaultOgImages, breadcrumbJsonLd, SITE_NAME } from '@/lib
  */
 
 export const metadata: Metadata = {
-  title: 'Termék-összehasonlítások: X vs Y párharcok a tesztjeinkből',
+  title: 'Termék-összehasonlítások (X vs Y)',
   description:
     'Azonos termékosztályú, összemérhető termékek egymás ellen: pontszám, ár, előnyök és hátrányok egy táblázatban a magyar nyelvű tesztjeink alapján.',
   alternates: { canonical: absoluteUrl('/osszehasonlitas') },
-  openGraph: {
+  openGraph: baseOpenGraph({
     title: `Termék-összehasonlítások | ${SITE_NAME}`,
     description:
       'X vs Y párharcok a tesztjeinkből: pontszám, ár, előnyök és hátrányok egy táblázatban.',
     url: absoluteUrl('/osszehasonlitas'),
-    siteName: SITE_NAME,
-    type: 'website',
-    locale: 'hu_HU',
     images: defaultOgImages('Termék-összehasonlítások'),
-  },
+  }),
 };
 
 export default async function CompareHubPage() {

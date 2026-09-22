@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getPublishedPosts } from '@/lib/data';
 import { prisma } from '@/lib/prisma';
+import { absoluteUrl } from '@/lib/seo';
 import Pagination from '@/components/site/Pagination';
 import InfinitePostList from '@/components/site/InfinitePostList';
 import { toClientPosts } from '@/lib/utils';
@@ -11,6 +12,9 @@ type Props = { searchParams: { q?: string; page?: string } };
 
 export const metadata: Metadata = {
   title: 'Keresés',
+  description:
+    'Keress a terméktesztek között: írj be egy kulcsszót, és listázzuk a hozzá tartozó magyar nyelvű teszteket, toplistákat és összehasonlításokat.',
+  alternates: { canonical: absoluteUrl('/kereses') },
   robots: { index: false, follow: true },
 };
 

@@ -3,8 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { getAllBrands, getBrandBySlug, getBrandPosts } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd, listingRobots, defaultOgImages } from '@/lib/seo';
-import { formatPriceFt } from '@/lib/utils';
+import { absoluteUrl, breadcrumbJsonLd, listingRobots, defaultOgImages, baseOpenGraph } from '@/lib/seo';
+import { formatPriceFt, truncate } from '@/lib/utils';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import { RatingBadge } from '@/components/site/VerdictStamp';
 
@@ -20,15 +20,18 @@ type Props = { params: { slug: string } };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const brand = await getBrandBySlug(params.slug);
   if (!brand) return {};
-  const title = `${brand.name} tesztek – termékbemutatók és értékelések magyarul`;
-  const description = `Az összes ${brand.name} termékteszt egy helyen: részletes bemutatók, vásárlói vélemények összesítése, pontozás és vásárlási tippek.`;
+  const title = truncate(`${brand.name} tesztek – termékbemutatók és értékelések magyarul`, 44);
+  const description = truncate(
+    `Az összes ${brand.name} termékteszt egy helyen: részletes bemutatók, vásárlói vélemények összesítése, pontozás és vásárlási tippek.`,
+    160
+  );
   return {
     title,
     description,
     // Egycikkes márkaoldal: vékony listaoldal, noindex - a linkjeit viszont követjük
     robots: listingRobots(brand.count),
     alternates: { canonical: absoluteUrl(`/marka/${brand.slug}`) },
-    openGraph: { title, description, url: absoluteUrl(`/marka/${brand.slug}`), images: defaultOgImages(title) },
+    openGraph: baseOpenGraph({ title, description, url: absoluteUrl(`/marka/${brand.slug}`), images: defaultOgImages(title) }),
   };
 }
 

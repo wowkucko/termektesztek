@@ -35,6 +35,77 @@ export function defaultOgImages(alt?: string) {
 }
 
 /**
+ * A layout OG-alapját (type/locale/siteName) minden, saját openGraph-ot adó
+ * oldalra ráteszi — a Next shallow merge-je miatt ezek a mezők különben
+ * leesnének. Minden oldal innen kapja az openGraph objektumot.
+ */
+export function baseOpenGraph(input: {
+  title: string;
+  description?: string;
+  url: string;
+  type?: 'website' | 'article';
+  images: NonNullable<Metadata['openGraph']>['images'];
+  publishedTime?: string;
+  modifiedTime?: string;
+  authors?: string | string[];
+  tags?: string[];
+}): Metadata['openGraph'] {
+  return {
+    type: input.type ?? 'website',
+    locale: 'hu_HU',
+    siteName: SITE_NAME,
+    title: input.title,
+    ...(input.description ? { description: input.description } : {}),
+    url: input.url,
+    images: input.images,
+    ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
+    ...(input.modifiedTime ? { modifiedTime: input.modifiedTime } : {}),
+    ...(input.authors ? { authors: input.authors } : {}),
+    ...(input.tags ? { tags: input.tags } : {}),
+  } as Metadata['openGraph'];
+}
+
+/**
+ * Szerző személy (Person séma) — az Article/Review `author` mezőjében és a
+ * látható „A szerzőről" doboz mellé. A tartalom társaságként készül, de a
+ * Google E-E-A-T jeleihez Person típusú szerzőt vár (Organization szerző
+ * önmagában nem elég a cikkoldalaknál).
+ */
+export function personJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: `${SITE_NAME} szerkesztősége`,
+    url: absoluteUrl('/rolunk'),
+    worksFor: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+  };
+}
+
+/**
+ * ItemList séma egy listaoldalhoz (kategória, címke): a látható kártyák
+ * sorrendjét adja vissza. Csak indexelhető oldalon érdemes megjeleníteni.
+ */
+export function itemListJsonLd(
+  name: string,
+  items: Array<{ slug: string; title: string; productName?: string | null }>,
+  description?: string
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name,
+    ...(description ? { description } : {}),
+    numberOfItems: items.length,
+    itemListElement: items.map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: absoluteUrl(`/blog/${p.slug}`),
+      name: p.productName || p.title,
+    })),
+  };
+}
+
+/**
  * Ennyi publikált cikk alatt egy listaoldal (címke, márka, kategória) a Google
  * szemében vékony/duplikált tartalom: ilyenkor nem indexeljük, de a benne lévő
  * linkeket követjük - így a crawler továbbra is eljut az ott szereplő cikkekhez.
@@ -77,11 +148,7 @@ export function postJsonLd(
     articleSection: post.category.name,
     wordCount: post.content.trim().split(/\s+/).filter(Boolean).length,
     timeRequired: `PT${readingTimeMinutes(post.content)}M`,
-    author: {
-      '@type': 'Organization',
-      name: SITE_NAME,
-      url: SITE_URL,
-    },
+    author: personJsonLd(),
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,
@@ -132,9 +199,12 @@ export function postJsonLd(
       },
       reviewRating: {
         '@type': 'Rating',
-        ratingValue: post.rating,
-        bestRating: 10,
-        worstRating: 0,
+        // A látható pontszám 0–10-es skálán van, de az aggregateRating (olvasói
+        // csillagok) 1–5-ös: a két séma-skálának EGYEZNIE kell, különben a
+        // Google manuális beavatkozást kezdeményezhet. Egységesen 1–5.
+        ratingValue: Math.min(5, Math.max(1, Math.round(post.rating * 5) / 10)),
+        bestRating: 5,
+        worstRating: 1,
       },
     };
   }

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { getFeaturedPost, getPublishedPosts, getTestOfTheWeek, getCategoryTopPicks, getTopTags } from '@/lib/data';
-import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl, defaultOgImages } from '@/lib/seo';
+import { SITE_DESCRIPTION, SITE_NAME, absoluteUrl, defaultOgImages, baseOpenGraph } from '@/lib/seo';
 import { formatDate, formatPriceFt } from '@/lib/utils';
 import PostCard from '@/components/site/PostCard';
 import TopPickStrip from '@/components/site/TopPickStrip';
@@ -14,12 +14,12 @@ export const metadata: Metadata = {
   title: { absolute: SITE_NAME },
   description: SITE_DESCRIPTION,
   alternates: { canonical: absoluteUrl('/') },
-  openGraph: {
+  openGraph: baseOpenGraph({
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
     url: absoluteUrl('/'),
     images: defaultOgImages(SITE_NAME),
-  },
+  }),
 };
 
 export default async function HomePage() {

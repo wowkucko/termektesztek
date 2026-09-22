@@ -95,7 +95,9 @@ async function resolveChecks(): Promise<Check[]> {
       checks.push({
         label: 'Cikkoldal',
         url: `${BASE_URL}/blog/${plain.slug}`,
-        jsonLdTypes: ['BreadcrumbList', 'Review|BlogPosting'],
+        // Person: a szerző séma (E-E-A-T) — a postJsonLd author mezőjén felül
+        // a cikkoldal külön Person blokkot is tartalmaz.
+        jsonLdTypes: ['BreadcrumbList', 'Review|BlogPosting', 'Person'],
       });
     }
   } catch {
@@ -112,7 +114,11 @@ async function resolveChecks(): Promise<Check[]> {
       checks.push({
         label: 'Kategóriaoldal',
         url: `${BASE_URL}/kategoria/${bestCategory.slug}`,
-        jsonLdTypes: ['BreadcrumbList'],
+        // ItemList csak az indexelhető (küszöb feletti) listákon jelenik meg
+        jsonLdTypes:
+          bestCategory._count.posts >= MIN_POSTS_FOR_LISTING_INDEX
+            ? ['BreadcrumbList', 'ItemList']
+            : ['BreadcrumbList'],
       });
     }
   } catch {
@@ -128,7 +134,10 @@ async function resolveChecks(): Promise<Check[]> {
       checks.push({
         label: 'Címkeoldal',
         url: `${BASE_URL}/cimke/${bestTag.slug}`,
-        jsonLdTypes: ['BreadcrumbList'],
+        jsonLdTypes:
+          bestTag._count.posts >= MIN_POSTS_FOR_LISTING_INDEX
+            ? ['BreadcrumbList', 'ItemList']
+            : ['BreadcrumbList'],
       });
     }
   } catch {
@@ -277,10 +286,38 @@ async function audit(): Promise<number> {
       if (!ogImage) problems.push('hiányzó og:image');
       else if (!/^https?:\/\//.test(ogImage)) problems.push(`og:image nem abszolút URL: ${ogImage}`);
 
+      // og:site_name + og:type: a layout OG-alapjának (baseOpenGraph) minden
+      // oldalon jelen kell lennie — hiányuk = ismét shallow-merge hiba.
+      if (!metaContent(html, /<meta property="og:site_name" content="([^"]*)"/)) {
+        problems.push('hiányzó og:site_name');
+      }
+      if (!metaContent(html, /<meta property="og:type" content="([^"]*)"/)) {
+        problems.push('hiányzó og:type');
+      }
+
       // canonical: kötelező
       const canonical = metaContent(html, /<link rel="canonical" href="([^"]*)"/);
       if (!canonical) problems.push('hiányzó canonical');
       else if (!/^https?:\/\//.test(canonical)) problems.push(`canonical nem abszolút URL: ${canonical}`);
+
+      // Leírás: kötelező, értelmes hossz (a SERP-foszlány ~160 karakter)
+      const description = metaContent(html, /<meta name="description" content="([^"]*)"/);
+      if (!description) problems.push('hiányzó meta description');
+      else if (description.length < 30) problems.push(`túl rövid meta description (${description.length} karakter)`);
+      else if (description.length > 175) problems.push(`túl hosszú meta description (${description.length} karakter)`);
+
+      // Cím: kötelező, nem túl hosszú. A sablon (oldalcím | site név) miatt a
+      // teljes <title> a ~75 karakteres SERP-küszöbön belül maradjon.
+      const titleTag = metaContent(html, /<title>([^<]*)<\/title>/);
+      if (!titleTag) problems.push('hiányzó <title>');
+      else if (titleTag.length > 76) problems.push(`túl hosszú <title> (${titleTag.length} karakter)`);
+
+      // Nyelv: a gyökér <html lang="hu"> kötelező
+      if (!/<html[^>]*\blang="hu\b/.test(html)) problems.push('hiányzó vagy nem "hu" <html lang>');
+
+      // Egyszeres h1: duplikált főcím gyengíti a címsor-struktúrát
+      const h1Count = (html.match(/<h1[\s>]/g) || []).length;
+      if (h1Count !== 1) problems.push(`${h1Count} db <h1> (pontosan 1 kell)`);
 
       // JSON-LD: az elvárt típusok megvannak? ("A|B" = bármelyik jó)
       const types = extractJsonLdTypes(html);

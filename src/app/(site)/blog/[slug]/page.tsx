@@ -5,8 +5,8 @@ import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';import { getPostBySlug, getPublishedPostSlugs, getRelatedPosts, getRelevantPosts, getPostComments, getCommentStats, getRankablePosts } from '@/lib/data';
-import { SITE_NAME, absoluteUrl, breadcrumbJsonLd, faqJsonLd, postJsonLd } from '@/lib/seo';
+import rehypeRaw from 'rehype-raw';import { getPostBySlug, getPublishedPostSlugs, getRelevantPosts, getPostComments, getCommentStats, getRankablePosts } from '@/lib/data';
+import { SITE_NAME, absoluteUrl, breadcrumbJsonLd, faqJsonLd, postJsonLd, baseOpenGraph, personJsonLd } from '@/lib/seo';
 import { formatDate, formatPriceFt, readingTimeMinutes, slugify, truncate } from '@/lib/utils';
 import Breadcrumbs from '@/components/site/Breadcrumbs';
 import { RatingBadge } from '@/components/site/VerdictStamp';
@@ -62,7 +62,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPostBySlug(params.slug);
   if (!post) return {};
 
-  const title = post.seoTitle || post.title;
+  // A meta cím a SERP-re megy: a sablon (oldalcím | site név) miatt 44-nél
+  // hosszabban vágná a Google — a látható h1 a teljes címet mutatja.
+  const title = truncate(post.seoTitle || post.title, 44);
   const description = post.seoDescription || truncate(post.excerpt, 160);
 
   // Megosztási kép: alapból a cikkhez renderelt dinamikus OG-kártya
@@ -76,7 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: absoluteUrl(`/blog/${post.slug}`) },
     // 18+ cikkek jelölése a metaadatokban is (keresők, szűrők, szülői eszközök)
     ...(isAdultContent(post) ? { other: { rating: 'adult' } } : {}),
-    openGraph: {
+    openGraph: baseOpenGraph({
       type: 'article',
       title,
       description,
@@ -84,7 +86,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
       publishedTime: post.publishedAt?.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
-    },
+      // article:author + article:tag — a megosztáskor és a Google számára is
+      // jelzi a szerzőt (Person séma: /rolunk) és a cikk témáit.
+      authors: [absoluteUrl('/rolunk')],
+      tags: post.tags.map((t) => t.tag.name),
+    }),
     twitter: {
       card: 'summary_large_image',
       title,
@@ -137,8 +143,9 @@ export default async function PostPage({ params }: Props) {
     }
   }
 
-  const related = await getRelatedPosts(post);
-  const relevant = await getRelevantPosts(post, 5);
+  // Relevancia-alapú kapcsolódó tesztek: az alsó blokk és az oldalsáv is ezt
+  // használja (kulcsszó, márka, címke, kategória szerint pontozva).
+  const relevant = await getRelevantPosts(post, 6);
   const minutes = readingTimeMinutes(post.content);
   const [comments, commentStats, rankable] = await Promise.all([
     getPostComments(post.id),
@@ -206,6 +213,10 @@ export default async function PostPage({ params }: Props) {
     <article className="pb-20">
       <script async dangerouslySetInnerHTML={{ __html: viewScript }} />
       <script async dangerouslySetInnerHTML={{ __html: affiliateClickScript }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd()) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -475,7 +486,7 @@ export default async function PostPage({ params }: Props) {
                   Kapcsolódó tesztek
                 </p>
                 <ul className="mt-3 space-y-3">
-                  {relevant.map((p) => (
+                  {relevant.slice(0, 5).map((p) => (
                     <li key={p.id}>
                       <Link href={`/blog/${p.slug}`} className="group block">
                         <p className="font-sans text-sm font-medium leading-snug text-ink transition-colors group-hover:text-teal-600">
@@ -500,11 +511,11 @@ export default async function PostPage({ params }: Props) {
         </aside>
       </div>
 
-      {related.length > 0 && (
+      {relevant.length > 0 && (
         <section className="container-page mt-20">
-          <h2 className="mb-6 font-display text-2xl font-bold text-ink">Hasonló tesztek a kategóriában</h2>
+          <h2 className="mb-6 font-display text-2xl font-bold text-ink">Hasonló tesztek</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {related.map((p) => (
+            {relevant.map((p) => (
               <PostCard key={p.id} post={p} />
             ))}
           </div>

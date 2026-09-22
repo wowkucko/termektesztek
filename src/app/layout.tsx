@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Archivo, Source_Serif_4, Inter } from 'next/font/google';
 import './globals.css';
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl, websiteJsonLd, organizationJsonLd, DEFAULT_OG_IMAGE, defaultOgImages } from '@/lib/seo';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl, websiteJsonLd, organizationJsonLd, DEFAULT_OG_IMAGE, defaultOgImages, baseOpenGraph } from '@/lib/seo';
 
 // Variable fontok, NEM preloadolva (`display: swap`): a betűtípusok nem
 // kellenek az első festéshez (előbb a fallback szöveg festődik, utána csere),
@@ -35,15 +35,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
-  openGraph: {
-    type: 'website',
-    locale: 'hu_HU',
-    siteName: SITE_NAME,
-    url: SITE_URL,
+  openGraph: baseOpenGraph({
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
+    url: SITE_URL,
     images: defaultOgImages(SITE_NAME),
-  },
+  }),
   twitter: {
     card: 'summary_large_image',
     title: SITE_NAME,

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
-// A (site) csoport 404-e is noindex: a státuszkód mellett a meta robots is
-// jelzi a keresőknek, hogy ne indexeljék.
+// A 404-es oldal sosem kerüljön a keresőindexbe (a státuszkód amúgy is
+// kizárná, de a meta robots explicit jelzi a szándékot).
 export const metadata: Metadata = {
   title: 'Az oldal nem található',
   robots: { index: false, follow: true },

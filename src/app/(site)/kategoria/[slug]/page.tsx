@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategoryBySlug, getPublishedPosts, getRankablePosts } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd, listingRobots, defaultOgImages } from '@/lib/seo';
+import { absoluteUrl, breadcrumbJsonLd, listingRobots, defaultOgImages, baseOpenGraph, itemListJsonLd, MIN_POSTS_FOR_LISTING_INDEX } from '@/lib/seo';
 import {
   MIN_POSTS_FOR_PRODUCT_CLASS,
   countProductClassPosts,
@@ -12,7 +12,7 @@ import Breadcrumbs from '@/components/site/Breadcrumbs';
 import Pagination from '@/components/site/Pagination';
 import InfinitePostList from '@/components/site/InfinitePostList';
 import ProductClassLinks from '@/components/site/ProductClassLinks';
-import { toClientPosts } from '@/lib/utils';
+import { toClientPosts, truncate } from '@/lib/utils';
 
 export const revalidate = 3600;
 
@@ -25,7 +25,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!category) return {};
   const page = Math.max(1, Number(searchParams.page) || 1);
   const title = `${category.name} tesztek`;
-  const description = category.description || `Az összes ${category.name.toLowerCase()} kategóriába tartozó termékteszt egy helyen.`;
+  const description = truncate(
+    category.description || `Az összes ${category.name.toLowerCase()} kategóriába tartozó termékteszt egy helyen.`,
+    160
+  );
   // Kevés cikkes kategória vagy 2+ lap: duplikált/vékony lista - noindex, follow
   const { total } = await getPublishedPosts({ categorySlug: category.slug, take: 1 });
   return {
@@ -33,7 +36,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     description,
     robots: listingRobots(total, page),
     alternates: { canonical: absoluteUrl(`/kategoria/${category.slug}`) },
-    openGraph: { title, description, url: absoluteUrl(`/kategoria/${category.slug}`), images: defaultOgImages(title) },
+    openGraph: baseOpenGraph({ title, description, url: absoluteUrl(`/kategoria/${category.slug}`), images: defaultOgImages(title) }),
   };
 }
 
@@ -52,6 +55,17 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     { name: 'Kezdőlap', href: '/' },
     { name: category.name },
   ];
+
+  // ItemList a látható kártyákból — csak az indexelhető (1. oldal, küszöb feletti)
+  // kategóriánál, hogy a séma a valódi találati listát tükrözze.
+  const itemList =
+    page === 1 && total >= MIN_POSTS_FOR_LISTING_INDEX && posts.length > 0
+      ? itemListJsonLd(
+          `${category.name} tesztek`,
+          posts,
+          category.description || `Az összes ${category.name.toLowerCase()} kategóriába tartozó termékteszt egy helyen.`
+        )
+      : null;
 
   // A kategória termékosztály-toplistái ("legjobb air fryer", "legjobb porszívó"):
   // a kereslet termékosztály-szinten van, ezért innen is linkeljük őket. A vékony
@@ -74,6 +88,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           ),
         }}
       />
+      {itemList && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
+      )}
 
       <Breadcrumbs items={crumbs} />
 

@@ -10,8 +10,8 @@ import {
   getTopRatedPosts,
   type RankablePost,
 } from '@/lib/data';
-import { absoluteUrl, breadcrumbJsonLd, faqJsonLdFromItems, listingRobots } from '@/lib/seo';
-import { formatPriceFt } from '@/lib/utils';
+import { absoluteUrl, breadcrumbJsonLd, faqJsonLdFromItems, listingRobots, baseOpenGraph } from '@/lib/seo';
+import { formatPriceFt, truncate } from '@/lib/utils';
 import {
   PRODUCT_CLASSES,
   MIN_POSTS_FOR_PRODUCT_CLASS,
@@ -101,7 +101,7 @@ const resolveSource = cache(async (slug: string, maxAr: number | null): Promise<
       content: productClassContent(cls.slug),
       totalCount: rankedAll.length,
       canonicalPath: `/legjobb/${cls.slug}`,
-      metaTitle: `Legjobb ${cls.name} ${year} – toplista és összehasonlítás`,
+      metaTitle: `Legjobb ${cls.name} ${year} – toplista`,
       metaDescription: `${cls.blurb} Rangsor ${rankedAll.length} magyar nyelvű teszt pontszámai alapján, ársáv szerint is szűrhető, összehasonlító táblázattal.`,
     };
   }
@@ -141,7 +141,7 @@ const resolveSource = cache(async (slug: string, maxAr: number | null): Promise<
     content: null,
     totalCount,
     canonicalPath: `/legjobb/${category.slug}`,
-    metaTitle: `Legjobb ${catName} ${year} – toplista és összehasonlítás`,
+    metaTitle: `Legjobb ${catName} ${year} – toplista`,
     metaDescription: `A legjobbra értékelt ${catName} termékek rangsorolva, magyar nyelvű tesztek alapján. Összehasonlító táblázat pontszámokkal, előnyökkel és vásárlási linkekkel.`,
   };
 });
@@ -152,8 +152,15 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!source) return {};
 
   const band = source.bands.find((b) => b.value === maxAr);
-  const title = band?.value ? `${source.metaTitle.split(' – ')[0]} – ${band.label.toLowerCase()} – toplista` : source.metaTitle;
-  const description = band?.value ? source.metaDescription.replace('Rangsor', `${band.label} szűrve. Rangsor`) : source.metaDescription;
+  const title = band?.value
+    ? truncate(`${source.metaTitle.split(' – ')[0]} – ${band.label.toLowerCase()}`, 44)
+    : truncate(source.metaTitle, 44);
+  const description = truncate(
+    band?.value
+      ? source.metaDescription.replace('Rangsor', `${band.label} szűrve. Rangsor`)
+      : source.metaDescription,
+    160
+  );
 
   // Megosztási kép: a toplista dinamikus OG-kártyája (/legjobb/{slug}/og —
   // cím + top-3 termék pontszámmal). Stabil URL, explicit images-szel.
@@ -166,7 +173,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // mindig az alap URL-re mutat. A vékony (<3 cikkes) osztályok noindexet kapnak.
     robots: listingRobots(source.totalCount),
     alternates: { canonical: absoluteUrl(source.canonicalPath) },
-    openGraph: { title, description, url: absoluteUrl(source.canonicalPath), images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }] },
+    openGraph: baseOpenGraph({ title, description, url: absoluteUrl(source.canonicalPath), images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }] }),
     // A layout twitter:image-je (og-default) felülírása, hogy itt is a dinamikus
     // kártya menjen megosztáskor.
     twitter: { card: 'summary_large_image', title, description, images: [ogImageUrl] },

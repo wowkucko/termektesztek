@@ -9,8 +9,8 @@ import {
   VS_SITEMAP_MIN_SCORE,
   vsSitemapPairs,
 } from '@/lib/compare';
-import { absoluteUrl, breadcrumbJsonLd, defaultOgImages, SITE_NAME } from '@/lib/seo';
-import { formatPriceFt } from '@/lib/utils';
+import { absoluteUrl, breadcrumbJsonLd, defaultOgImages, SITE_NAME, baseOpenGraph } from '@/lib/seo';
+import { formatPriceFt, truncate } from '@/lib/utils';
 import { RatingBadge } from '@/components/site/VerdictStamp';
 
 /**
@@ -42,23 +42,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { a, b, canonical, match } = resolved;
   const name = (p: RankablePost) =>
     [p.productBrand, p.productName].filter(Boolean).join(' — ') || p.title;
-  const title = `${name(a)} vs ${name(b)}`;
+  // A meta cím/leírás a hosszú terméknevek miatt is a SERP-küszöbön belül marad.
+  const title = truncate(`${name(a)} vs ${name(b)}`, 44);
   const url = absoluteUrl(`/osszehasonlitas/${canonical}`);
 
   return {
     title,
-    description: `${name(a)} és ${name(b)} egymás ellen: pontszám, ár, fő előnyök és hátrányok a magyar nyelvű tesztjeink alapján.`,
+    description: truncate(
+      `${name(a)} és ${name(b)} egymás ellen: pontszám, ár, fő előnyök és hátrányok a magyar nyelvű tesztjeink alapján.`,
+      160
+    ),
     alternates: { canonical: url },
     robots: match.score >= VS_SITEMAP_MIN_SCORE ? undefined : { index: false, follow: true },
-    openGraph: {
+    openGraph: baseOpenGraph({
       title: `${title} | ${SITE_NAME}`,
       description: 'Két összemérhető termék párharcban: pontszám, ár, előnyök és hátrányok.',
       url,
-      siteName: SITE_NAME,
       type: 'article',
-      locale: 'hu_HU',
       images: defaultOgImages(title),
-    },
+    }),
   };
 }
 
